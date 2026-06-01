@@ -1,0 +1,3378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PreCrías">
+<meta name="theme-color" content="#030b0f">
+<meta name="description" content="NERV Pre Crías — Sistema profesional de monitoreo acuícola de pre-crías de camarón">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.svg">
+<title>Pre Crías · NERV</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="module">
+import { initializeApp }      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, getDocs,
+         onSnapshot, deleteDoc, serverTimestamp,
+         enableIndexedDbPersistence }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut,
+         onAuthStateChanged, updatePassword, EmailAuthProvider,
+         reauthenticateWithCredential }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyAfNPq3kO7YaRFMBq02eZVdA5zs2jc1h4g",
+  authDomain:        "pre-crias.firebaseapp.com",
+  projectId:         "pre-crias",
+  storageBucket:     "pre-crias.firebasestorage.app",
+  messagingSenderId: "182990581516",
+  appId:             "1:182990581516:web:ecf7ebe74adafe4e88a329"
+};
+
+window._fbReady = false;
+try {
+  const app  = initializeApp(firebaseConfig);
+  const db   = getFirestore(app);
+  const auth = getAuth(app);
+  enableIndexedDbPersistence(db).catch(()=>{});
+  window._fbDB    = db;
+  window._fbAuth  = auth;
+  window._fbReady = true;
+  window._fb = { collection, doc, setDoc, getDocs, onSnapshot,
+                 deleteDoc, serverTimestamp };
+  window._fbAuthFns = { signInWithEmailAndPassword, signOut,
+                        onAuthStateChanged, updatePassword,
+                        EmailAuthProvider, reauthenticateWithCredential };
+  console.info("✅ Firebase Auth + Firestore listos");
+} catch(e) { console.warn("Firebase error:", e); }
+</script>
+
+<style>
+:root{
+  /* ── Colores base ── */
+  --bg:#030b0f; --s0:#071218; --s1:#0a1a22;
+  --g:#00e676; --g2:#00c853; --gd:rgba(0,230,118,.6); --gg:rgba(0,230,118,.1);
+  --r:#ff5252; --rd:rgba(255,82,82,.6); --rg:rgba(255,82,82,.1);
+  --c:#00b0ff; --y:#ffc400; --pu:#ce93d8;
+  --w:#e8f5e9; --dim:#5a8070; --dim2:#152a20;
+  --bo:rgba(0,230,118,.12); --br:rgba(255,82,82,.3);
+  --rad:14px; --rsm:9px; --pill:999px;
+  --F:'Plus Jakarta Sans',sans-serif; --FM:'JetBrains Mono',monospace;
+  --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+  --shadow:0 4px 24px rgba(0,0,0,.5);
+  --shadow-g:0 0 0 1px rgba(0,230,118,.15),0 4px 20px rgba(0,0,0,.4);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:15px;-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{
+  background:var(--bg);font-family:var(--F);color:var(--w);
+  min-height:100dvh;overflow-x:hidden;
+  padding-bottom:calc(76px + var(--sb));
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── Fondo grid sutil ── */
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,230,118,.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,230,118,.018) 1px,transparent 1px);
+  background-size:40px 40px}
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 120% 45% at 50% 0%,rgba(0,230,118,.04),transparent 60%)}
+
+/* ── LAYOUT ── */
+.app{position:relative;z-index:2;max-width:480px;margin:0 auto;padding:0 14px 16px}
+
+/* ══════════════════════════════════════════
+   APPBAR - Barra superior
+══════════════════════════════════════════ */
+.appbar{
+  display:flex;align-items:center;gap:12px;
+  padding:calc(var(--st) + 12px) 16px 12px;
+  position:sticky;top:0;z-index:200;
+  background:rgba(3,11,15,.92);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--bo);
+  margin:0 -14px 16px;
+  transition:box-shadow .3s;
+}
+.alogo{
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  background:url('https://i.pinimg.com/originals/d8/69/1d/d8691d0911c35769fa26ef6bc82cefc0.jpg') center/cover;
+  box-shadow:0 0 0 2px rgba(0,230,118,.3),0 2px 12px rgba(0,0,0,.5);
+}
+.atitle{
+  font-size:.82rem;font-weight:800;letter-spacing:.04em;
+  color:var(--g);line-height:1.1;
+}
+.asub{font-size:.58rem;color:var(--dim);font-weight:500;margin-top:2px;letter-spacing:.02em}
+.sdot{
+  width:8px;height:8px;border-radius:50%;background:var(--dim);flex-shrink:0;
+  transition:background .4s,box-shadow .4s;
+}
+.sdot.on{background:var(--g);box-shadow:0 0 8px var(--g);animation:sdp 2.5s ease-in-out infinite}
+.sdot.sy{background:var(--y);box-shadow:0 0 8px var(--y);animation:sdp .7s ease-in-out infinite}
+.sdot.er{background:var(--r);box-shadow:0 0 8px var(--r)}
+@keyframes sdp{50%{opacity:.35}}
+.alive{
+  background:rgba(255,82,82,.15);color:var(--r);
+  font-size:.52rem;padding:4px 9px;border-radius:var(--pill);
+  letter-spacing:.06em;font-weight:700;
+  border:1px solid rgba(255,82,82,.3);
+}
+
+/* ══════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════ */
+.dash{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.dc{
+  background:var(--s0);border:1px solid var(--bo);border-radius:var(--rad);
+  padding:14px 15px;position:relative;overflow:hidden;
+  transition:transform .15s,border-color .2s;
+  box-shadow:var(--shadow);
+}
+.dc::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(135deg,rgba(0,230,118,.04),transparent 60%);
+}
+.dc:active{transform:scale(.97)}
+.dv{
+  font-family:var(--FM);font-size:1.9rem;font-weight:700;
+  color:var(--g);line-height:1;position:relative;
+}
+.dv.r{color:var(--r)} .dv.y{color:var(--y)} .dv.c{color:var(--c)}
+.dl{
+  font-size:.57rem;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim);margin-top:6px;position:relative;
+}
+.dc.full{grid-column:span 2;display:flex;justify-content:space-around;align-items:center;padding:12px 8px}
+.dc.full .di{text-align:center;flex:1}
+.dc.full .dv{font-size:1.4rem}
+
+/* ══════════════════════════════════════════
+   CARDS
+══════════════════════════════════════════ */
+.card{
+  background:var(--s0);border:1px solid var(--bo);border-radius:var(--rad);
+  padding:16px;margin-bottom:12px;
+  box-shadow:var(--shadow);
+  transition:border-color .2s;
+}
+.card:focus-within{border-color:rgba(0,230,118,.25)}
+/* Report cards have no padding by default — handled per-section */
+#pgRep .card{ padding:0; }
+/* Buttons with column layout for export section */
+#pgRep .btn.sm{ display:flex; align-items:center; justify-content:center; }
+/* Table hover */
+#resumenPC tbody tr:hover{ background:rgba(0,230,118,.06) !important; }
+.ct{
+  font-size:.63rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--g);margin-bottom:14px;display:flex;align-items:center;gap:9px;
+}
+.ct::after{content:'';flex:1;height:1px;background:var(--bo)}
+
+/* ══════════════════════════════════════════
+   FORMULARIOS
+══════════════════════════════════════════ */
+.lbl{
+  display:block;font-size:.6rem;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:var(--gd);margin:10px 0 5px;
+}
+input,select{
+  width:100%;padding:11px 14px;border-radius:var(--rsm);
+  border:1px solid rgba(0,230,118,.15);
+  background:rgba(0,0,0,.4);color:var(--w);
+  font-family:var(--F);font-size:.85rem;font-weight:500;
+  transition:border-color .2s,box-shadow .2s,background .2s;
+  outline:none;appearance:none;-webkit-appearance:none;
+}
+input:focus,select:focus{
+  border-color:var(--g);
+  box-shadow:0 0 0 3px rgba(0,230,118,.12);
+  background:rgba(0,20,12,.6);
+}
+select option{background:#071218}
+input[type="date"]{color-scheme:dark}
+input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
+input::placeholder{color:var(--dim);font-weight:400}
+
+/* ── BOTONES ── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:10px 16px;border-radius:var(--rsm);
+  border:1px solid var(--bo);
+  background:var(--gg);color:var(--g);
+  font-family:var(--F);font-size:.76rem;font-weight:600;
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+  user-select:none;-webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn:active{transform:scale(.94);opacity:.85}
+.btn.pr{background:rgba(0,230,118,.18);border-color:rgba(0,230,118,.4)}
+.btn.dn{background:rgba(255,82,82,.1);border-color:rgba(255,82,82,.3);color:var(--r)}
+.btn.dn:active{background:rgba(255,82,82,.2)}
+.btn.inf{background:rgba(0,176,255,.1);border-color:rgba(0,176,255,.3);color:var(--c)}
+.btn.wn{background:rgba(255,196,0,.1);border-color:rgba(255,196,0,.3);color:var(--y)}
+.btn.sm{padding:8px 13px;font-size:.7rem}
+.btn.xs{padding:6px 10px;font-size:.64rem}
+.btn.full{width:100%}
+.brow{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ══════════════════════════════════════════
+   PILA CARD
+══════════════════════════════════════════ */
+.pc{
+  background:var(--s0);border:1px solid var(--bo);border-radius:var(--rad);
+  margin-bottom:12px;overflow:hidden;
+  box-shadow:var(--shadow);
+  transition:border-color .25s,box-shadow .25s;
+}
+.pc.al{
+  border-color:rgba(255,82,82,.4);
+  box-shadow:0 0 0 1px rgba(255,82,82,.15),0 4px 24px rgba(0,0,0,.5);
+}
+.pc.cosechada{border-color:rgba(206,147,216,.25);opacity:.93}
+.pc.cosechada .ph{background:linear-gradient(90deg,rgba(206,147,216,.05),transparent)}
+.pc.cosechada .pfill{background:linear-gradient(90deg,#ce93d8,#ab47bc)}
+
+/* Cabecera de pila */
+.ph{
+  display:flex;align-items:center;gap:11px;flex-wrap:nowrap;
+  padding:14px 15px;cursor:pointer;
+  background:linear-gradient(90deg,rgba(0,230,118,.035),transparent);
+  user-select:none;-webkit-user-select:none;
+  transition:background .18s;
+  -webkit-tap-highlight-color:transparent;
+}
+.ph:active{background:rgba(0,230,118,.07)}
+.rdot{
+  width:34px;height:34px;border-radius:9px;flex-shrink:0;
+  background:url('https://i.pinimg.com/originals/d8/69/1d/d8691d0911c35769fa26ef6bc82cefc0.jpg') center/cover;
+  box-shadow:0 0 0 2px rgba(0,230,118,.25),0 2px 8px rgba(0,0,0,.4);
+}
+.pnm{
+  font-size:1rem;font-weight:700;color:var(--g);
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.pch{
+  color:var(--dim);font-size:.7rem;
+  transition:transform .22s;flex-shrink:0;
+  width:20px;height:20px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;background:rgba(0,230,118,.06);
+  border:1px solid var(--bo);
+}
+.pch.op{transform:rotate(90deg);color:var(--g);background:rgba(0,230,118,.12);border-color:rgba(0,230,118,.3)}
+.pdtag{
+  background:rgba(255,82,82,.1);border:1px solid rgba(255,82,82,.25);
+  color:var(--r);font-size:.6rem;padding:4px 10px;
+  border-radius:var(--pill);flex-shrink:0;font-weight:700;
+  font-family:var(--FM);
+}
+.pcycrow{
+  padding:0 15px 8px;font-size:.64rem;color:var(--dim);
+  font-weight:500;letter-spacing:.01em;
+}
+.pbar{height:3px;background:rgba(0,230,118,.07)}
+.pfill{height:100%;background:linear-gradient(90deg,var(--g2),var(--c));transition:width .7s cubic-bezier(.4,0,.2,1)}
+
+/* Chips de info */
+.srow{display:flex;flex-wrap:wrap;gap:5px;padding:9px 15px}
+.chip{
+  background:rgba(0,230,118,.05);border:1px solid rgba(0,230,118,.12);
+  border-radius:var(--pill);padding:5px 11px;
+  font-size:.62rem;color:var(--dim);white-space:nowrap;font-weight:500;
+}
+.chip b{color:var(--g);font-weight:700}
+.chip.wn b{color:var(--r)} .chip.ca b{color:var(--y)}
+
+/* Banners de alerta */
+.evbanner{
+  margin:0 15px 10px;padding:9px 13px;
+  background:rgba(255,82,82,.07);border:1px solid rgba(255,82,82,.22);
+  border-left:3px solid var(--r);
+  border-radius:var(--rsm);font-size:.7rem;color:var(--r);font-weight:500;
+}
+.o2banner{
+  margin:0 15px 10px;padding:9px 13px;
+  background:rgba(255,82,82,.12);border:1px solid var(--r);
+  border-left:3px solid var(--r);
+  border-radius:var(--rsm);font-size:.7rem;color:var(--r);font-weight:700;
+  animation:blink 1.5s step-end infinite;
+}
+@keyframes blink{50%{opacity:.55}}
+
+/* ══════════════════════════════════════════
+   PILA BODY (sección expandida)
+══════════════════════════════════════════ */
+.pb{display:none;padding:14px 15px;border-top:1px solid var(--bo)}
+.pb.op{display:block}
+
+/* Sub-tabs dentro de pila */
+.stabs{
+  display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;
+  margin-bottom:14px;padding-bottom:3px;
+  scrollbar-width:none;
+}
+.stabs::-webkit-scrollbar{display:none}
+.stab{
+  padding:7px 13px;border-radius:var(--pill);
+  border:1px solid var(--bo);
+  background:rgba(0,0,0,.3);color:var(--dim);
+  font-family:var(--F);font-size:.67rem;font-weight:600;
+  cursor:pointer;white-space:nowrap;
+  transition:all .15s;flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;
+}
+.stab.ac{
+  background:rgba(0,230,118,.14);
+  border-color:rgba(0,230,118,.4);
+  color:var(--g);
+}
+.stab:active{background:rgba(0,230,118,.08)}
+.spn{display:none} .spn.ac{display:block}
+
+/* ══════════════════════════════════════════
+   EVENTOS
+══════════════════════════════════════════ */
+.evl{display:flex;flex-direction:column;gap:8px}
+.evi{
+  display:flex;align-items:flex-start;gap:11px;
+  background:rgba(0,230,118,.03);border:1px solid var(--bo);
+  border-radius:var(--rsm);padding:10px 13px;font-size:.73rem;
+}
+.evi.hoy{border-color:rgba(255,82,82,.3);background:rgba(255,82,82,.06);border-left:3px solid var(--r)}
+.evi.man{border-color:rgba(255,196,0,.25);background:rgba(255,196,0,.04);border-left:3px solid var(--y)}
+.eday{
+  font-family:var(--FM);font-size:1rem;color:var(--g);
+  font-weight:700;min-width:30px;
+}
+.eday.hoy{color:var(--r)} .eday.man{color:var(--y)}
+.etag{font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+
+/* ══════════════════════════════════════════
+   PESO
+══════════════════════════════════════════ */
+.pgrid{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.plist{
+  display:flex;flex-direction:column;gap:5px;
+  margin:10px 0;max-height:185px;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:rgba(0,230,118,.2) transparent;
+}
+.plist::-webkit-scrollbar{width:3px}
+.plist::-webkit-scrollbar-thumb{background:rgba(0,230,118,.2);border-radius:2px}
+.pitem{
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(0,230,118,.04);border:1px solid var(--bo);
+  border-radius:var(--rsm);padding:8px 12px;font-size:.72rem;font-weight:500;
+}
+.pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ══════════════════════════════════════════
+   ALIMENTO
+══════════════════════════════════════════ */
+.arow{
+  background:rgba(0,0,0,.3);border:1px solid var(--bo);
+  border-radius:var(--rsm);padding:12px;margin-bottom:9px;
+}
+.arow-grid{display:grid;grid-template-columns:1fr 80px 75px;gap:8px;align-items:end}
+.rel{position:relative}
+.sug{
+  background:#071a10;border:1px solid var(--bo);border-radius:var(--rsm);
+  position:absolute;z-index:50;max-height:160px;overflow-y:auto;
+  width:100%;top:calc(100% + 3px);left:0;
+  box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+.sug-item{
+  padding:10px 14px;font-size:.74rem;cursor:pointer;
+  border-bottom:1px solid rgba(0,230,118,.07);color:var(--w);font-weight:500;
+}
+.sug-item:active{background:rgba(0,230,118,.1)}
+
+/* ══════════════════════════════════════════
+   FECHA RETROACTIVA
+══════════════════════════════════════════ */
+.date-row{
+  display:flex;align-items:center;gap:9px;margin-bottom:11px;
+  background:rgba(0,176,255,.04);border:1px solid rgba(0,176,255,.18);
+  border-radius:var(--rsm);padding:9px 13px;
+}
+.date-row label{
+  font-size:.62rem;color:var(--c);font-weight:700;
+  letter-spacing:.06em;white-space:nowrap;flex-shrink:0;
+}
+.date-row input{
+  border-color:rgba(0,176,255,.25);background:rgba(0,0,0,.35);
+  font-size:.76rem;
+}
+.date-row input:focus{border-color:var(--c);box-shadow:0 0 0 3px rgba(0,176,255,.1)}
+
+/* ══════════════════════════════════════════
+   AGUA
+══════════════════════════════════════════ */
+.hblock{
+  background:rgba(0,230,118,.025);border:1px solid var(--bo);
+  border-left:3px solid var(--g2);border-radius:var(--rsm);
+  padding:11px 13px;margin-bottom:10px;
+}
+.hhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;font-size:.67rem}
+.hlbl{color:var(--r);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.hlast{color:var(--dim);font-size:.62rem;font-weight:500}
+.hlast.wn{color:var(--r);font-weight:700}
+.hinps{display:flex;gap:8px}
+
+/* ══════════════════════════════════════════
+   PROYECCIÓN
+══════════════════════════════════════════ */
+.prlist{display:flex;flex-direction:column;gap:6px;margin:9px 0}
+.pri{
+  padding:9px 12px;border-radius:var(--rsm);font-size:.7rem;
+  background:rgba(0,230,118,.05);border:1px solid rgba(0,230,118,.15);
+  color:var(--w);font-weight:500;
+}
+.pri.cr{background:rgba(255,82,82,.08);border-color:rgba(255,82,82,.3);color:var(--r)}
+
+/* ══════════════════════════════════════════
+   NUEVO CICLO
+══════════════════════════════════════════ */
+.ncbox{
+  background:rgba(0,176,255,.04);border:1px solid rgba(0,176,255,.18);
+  border-radius:var(--rsm);padding:13px;margin-bottom:12px;display:none;
+}
+.ncbox.op{display:block}
+
+/* ══════════════════════════════════════════
+   GRÁFICAS
+══════════════════════════════════════════ */
+.chbox{
+  background:rgba(0,0,0,.3);border:1px solid var(--bo);
+  border-radius:var(--rsm);padding:11px;margin:11px 0;
+}
+.chbox canvas{max-height:155px}
+
+/* ══════════════════════════════════════════
+   MODAL HISTORIAL
+══════════════════════════════════════════ */
+.mover{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  z-index:500;align-items:flex-end;justify-content:center;
+}
+.mover.op{display:flex}
+.msheet{
+  background:#07141a;border:1px solid var(--bo);
+  border-radius:20px 20px 0 0;
+  width:100%;max-width:480px;max-height:90dvh;
+  display:flex;flex-direction:column;
+  box-shadow:0 -8px 60px rgba(0,230,118,.1);
+  padding-bottom:var(--sb);
+  animation:sup .25s cubic-bezier(.4,0,.2,1);
+}
+@keyframes sup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mhandle{width:38px;height:4px;background:var(--dim2);border-radius:2px;margin:11px auto 0;flex-shrink:0}
+.mhead{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 17px 9px;border-bottom:1px solid var(--bo);flex-shrink:0;
+}
+.mtitle{font-size:.72rem;font-weight:700;color:var(--g);letter-spacing:.1em;text-transform:uppercase}
+.mbody{overflow-y:auto;padding:15px 17px;flex:1;scrollbar-width:thin;scrollbar-color:rgba(0,230,118,.2) transparent}
+.mbody::-webkit-scrollbar{width:3px}
+.mbody::-webkit-scrollbar-thumb{background:rgba(0,230,118,.2);border-radius:2px}
+.mtabs{
+  display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;
+  padding:9px 17px 0;flex-shrink:0;scrollbar-width:none;
+}
+.mtabs::-webkit-scrollbar{display:none}
+
+/* ══════════════════════════════════════════
+   HISTORIAL ITEMS
+══════════════════════════════════════════ */
+.hi{
+  display:flex;align-items:flex-start;gap:10px;
+  background:rgba(0,230,118,.04);border:1px solid var(--bo);
+  border-radius:var(--rsm);padding:10px 12px;margin-bottom:7px;font-size:.72rem;
+}
+.hid{
+  font-family:var(--FM);font-size:.82rem;color:var(--g);
+  font-weight:700;min-width:30px;flex-shrink:0;
+}
+.hdt{flex:1;min-width:0;line-height:1.6}
+.hmt{font-size:.62rem;color:var(--dim);margin-top:2px;font-weight:500}
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+.tc{
+  position:fixed;top:calc(var(--st) + 64px);left:50%;
+  transform:translateX(-50%);z-index:9000;
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  pointer-events:none;
+}
+.tst{
+  background:rgba(5,20,14,.97);border:1px solid rgba(0,230,118,.4);
+  color:var(--g);padding:10px 20px;border-radius:var(--pill);
+  font-size:.73rem;font-weight:600;letter-spacing:.04em;
+  box-shadow:0 4px 24px rgba(0,0,0,.5),0 0 0 1px rgba(0,230,118,.1);
+  animation:tin .22s ease,tout .3s ease 2s forwards;
+  max-width:90vw;text-align:center;
+}
+.tst.er{border-color:rgba(255,82,82,.4);color:var(--r);box-shadow:0 4px 24px rgba(0,0,0,.5),0 0 0 1px rgba(255,82,82,.1)}
+.tst.wn{border-color:rgba(255,196,0,.4);color:var(--y)}
+.tst.inf{border-color:rgba(0,176,255,.4);color:var(--c)}
+@keyframes tin{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+@keyframes tout{to{opacity:0;transform:translateY(-10px)}}
+
+/* ══════════════════════════════════════════
+   BOTTOM NAV
+══════════════════════════════════════════ */
+.bnav{
+  position:fixed;bottom:0;left:0;right:0;z-index:300;
+  background:rgba(3,11,15,.96);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1px solid var(--bo);
+  padding:9px 0 calc(9px + var(--sb));
+  display:flex;justify-content:space-around;align-items:center;
+}
+.nb{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:none;border:none;color:var(--dim);
+  font-family:var(--F);font-size:.54rem;font-weight:600;
+  letter-spacing:.06em;text-transform:uppercase;
+  cursor:pointer;padding:5px 12px;border-radius:var(--rsm);
+  transition:color .17s;
+  -webkit-tap-highlight-color:transparent;
+}
+.nb .ico{font-size:1.25rem;line-height:1}
+.nb.ac{color:var(--g)}
+.nb.ac .ico{filter:drop-shadow(0 0 4px var(--g))}
+.nb:active{background:rgba(0,230,118,.06)}
+
+/* ══════════════════════════════════════════
+   PÁGINAS
+══════════════════════════════════════════ */
+.page{display:none} .page.ac{display:block}
+
+/* ══════════════════════════════════════════
+   MISC
+══════════════════════════════════════════ */
+.sep{height:1px;background:var(--bo);margin:12px 0}
+.tag{
+  display:inline-block;background:rgba(0,230,118,.1);
+  border:1px solid rgba(0,230,118,.22);
+  color:var(--g);border-radius:var(--pill);
+  padding:3px 9px;font-size:.61rem;font-weight:700;
+}
+.tag.r{background:rgba(255,82,82,.1);border-color:rgba(255,82,82,.25);color:var(--r)}
+.tag.y{background:rgba(255,196,0,.1);border-color:rgba(255,196,0,.22);color:var(--y)}
+.empty{
+  text-align:center;color:var(--dim);font-size:.78rem;
+  padding:30px 16px;line-height:2.2;font-weight:500;
+}
+.fbbanner{
+  background:rgba(255,196,0,.07);border:1px solid rgba(255,196,0,.28);
+  border-radius:var(--rsm);padding:12px 14px;margin-bottom:15px;
+  font-size:.7rem;color:var(--y);line-height:1.8;display:none;
+}
+.fbbanner.sh{display:block}
+.fbbanner code{background:rgba(255,196,0,.15);border-radius:4px;padding:1px 6px;font-family:var(--FM)}
+.fbbanner ol{padding-left:17px;margin-top:7px}
+.fbbanner li{margin-bottom:3px}
+
+/* Ajustes */
+.sset{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 0;border-bottom:1px solid var(--bo);gap:11px;
+}
+.slbl{font-size:.78rem;color:var(--w);font-weight:600}
+.ssub{font-size:.63rem;color:var(--dim);margin-top:2px;font-weight:400}
+.toggle{
+  width:44px;height:25px;background:var(--dim2);border-radius:var(--pill);
+  position:relative;cursor:pointer;flex-shrink:0;transition:background .22s;
+  border:1px solid rgba(0,0,0,.3);
+}
+.toggle.on{background:var(--g2)}
+.toggle::after{
+  content:'';position:absolute;top:3px;left:3px;
+  width:17px;height:17px;background:#fff;border-radius:50%;
+  transition:transform .22s;
+  box-shadow:0 1px 4px rgba(0,0,0,.4);
+}
+.toggle.on::after{transform:translateX(19px)}
+
+/* Calendario */
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cald{
+  background:rgba(0,230,118,.04);border:1px solid var(--bo);
+  border-radius:var(--rsm);padding:6px 3px;text-align:center;font-size:.58rem;
+  transition:border-color .2s;
+}
+.cald.td{border-color:rgba(0,230,118,.3);background:rgba(0,230,118,.06)}
+.cdname{color:var(--dim);font-size:.52rem;margin-bottom:4px;font-weight:600}
+.cev{
+  background:var(--r);color:#fff;border-radius:var(--pill);
+  padding:2px 4px;margin-top:3px;font-size:.5rem;line-height:1.4;font-weight:700;
+}
+.cev.g{background:var(--g2);color:#000}
+
+/* ══════════════════════════════════════════
+   BANNER INSTALACIÓN PWA
+══════════════════════════════════════════ */
+#pwaInstall{
+  display:none;position:fixed;bottom:calc(76px + var(--sb) + 8px);
+  left:50%;transform:translateX(-50%);
+  background:#071a10;border:1px solid rgba(0,230,118,.35);
+  border-radius:var(--rad);padding:13px 16px;
+  z-index:400;max-width:calc(100% - 28px);width:460px;
+  box-shadow:0 8px 32px rgba(0,0,0,.6);
+  animation:tin .3s ease;
+}
+#pwaInstall.sh{display:flex;align-items:center;gap:12px}
+.pwaText{flex:1;font-size:.72rem;color:var(--w);font-weight:500}
+.pwaText b{color:var(--g);display:block;margin-bottom:2px;font-size:.76rem}
+</style>
+<style>
+/* ════════════════════════════════════════
+   AUTH OVERLAY
+════════════════════════════════════════ */
+#authOverlay{
+  position:fixed;inset:0;z-index:3000;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:28px 20px;
+  transition:opacity .4s ease;
+}
+#authOverlay.out{opacity:0;pointer-events:none}
+.auth-card{
+  width:100%;max-width:380px;
+  background:var(--s0);border:1px solid var(--bo);
+  border-radius:20px;padding:32px 26px;
+  box-shadow:0 8px 48px rgba(0,0,0,.6);
+}
+.auth-logo{
+  width:64px;height:64px;border-radius:16px;margin:0 auto 22px;
+  display:block;
+  background:url('https://i.pinimg.com/originals/d8/69/1d/d8691d0911c35769fa26ef6bc82cefc0.jpg') center/cover;
+  box-shadow:0 0 0 2px rgba(0,230,118,.3),0 4px 20px rgba(0,0,0,.5);
+}
+.auth-title{
+  font-size:1.15rem;font-weight:800;color:var(--g);
+  text-align:center;margin-bottom:4px;letter-spacing:.02em;
+}
+.auth-sub{
+  font-size:.67rem;color:var(--dim);text-align:center;
+  margin-bottom:26px;font-weight:500;letter-spacing:.03em;
+  text-transform:uppercase;
+}
+.auth-lbl{
+  display:block;font-size:.6rem;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:var(--gd);margin:14px 0 5px;
+}
+.auth-inp{
+  width:100%;padding:13px 15px;border-radius:10px;
+  border:1px solid rgba(0,230,118,.18);
+  background:rgba(0,0,0,.45);color:var(--w);
+  font-family:var(--F);font-size:.92rem;font-weight:500;
+  outline:none;appearance:none;-webkit-appearance:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.auth-inp:focus{
+  border-color:var(--g);
+  box-shadow:0 0 0 3px rgba(0,230,118,.12);
+}
+.auth-inp::placeholder{color:var(--dim);font-weight:400}
+.auth-err{
+  background:rgba(255,82,82,.1);border:1px solid rgba(255,82,82,.3);
+  border-radius:9px;padding:10px 13px;
+  font-size:.72rem;color:var(--r);font-weight:600;
+  margin-top:14px;display:none;
+}
+.auth-err.sh{display:block}
+.auth-btn{
+  width:100%;margin-top:22px;padding:13px;
+  border-radius:10px;border:none;
+  background:var(--g2);color:#000;
+  font-family:var(--F);font-size:.88rem;font-weight:800;
+  cursor:pointer;letter-spacing:.03em;
+  transition:opacity .15s,transform .15s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.auth-btn:active{opacity:.8;transform:scale(.97)}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-loading{
+  font-size:.68rem;color:var(--dim);text-align:center;
+  margin-top:14px;display:none;
+}
+.auth-loading.sh{display:block}
+
+/* ── Chip de usuario en appbar ── */
+.user-chip{
+  display:flex;align-items:center;gap:7px;
+  background:rgba(0,230,118,.07);
+  border:1px solid var(--bo);border-radius:var(--pill);
+  padding:5px 10px 5px 6px;cursor:pointer;
+  transition:background .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.user-chip:active{background:rgba(0,230,118,.13)}
+.user-avatar{
+  width:24px;height:24px;border-radius:50%;
+  background:var(--g2);color:#000;
+  font-size:.62rem;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.user-name{
+  font-size:.65rem;font-weight:700;color:var(--g);
+  max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.user-role{
+  font-size:.52rem;color:var(--dim);font-weight:600;letter-spacing:.04em;
+}
+
+/* ── Modal cambio contraseña / perfil ── */
+#userMenu{
+  position:fixed;inset:0;z-index:2500;
+  background:rgba(0,0,0,.82);backdrop-filter:blur(14px);
+  display:none;align-items:flex-end;justify-content:center;
+}
+#userMenu.op{display:flex}
+.umsheet{
+  background:#071218;border:1px solid var(--bo);
+  border-radius:20px 20px 0 0;
+  width:100%;max-width:480px;
+  padding:20px 22px calc(22px + env(safe-area-inset-bottom));
+  animation:sup .25s cubic-bezier(.4,0,.2,1);
+}
+.um-handle{width:36px;height:4px;background:var(--dim2);border-radius:2px;margin:0 auto 18px}
+.um-name{font-size:1rem;font-weight:800;color:var(--g);margin-bottom:2px}
+.um-email{font-size:.68rem;color:var(--dim);font-weight:500;margin-bottom:18px}
+.um-role-badge{
+  display:inline-block;padding:4px 12px;border-radius:var(--pill);
+  font-size:.62rem;font-weight:700;letter-spacing:.06em;
+  margin-bottom:20px;
+}
+.um-role-badge.admin{background:rgba(0,230,118,.15);border:1px solid rgba(0,230,118,.3);color:var(--g)}
+.um-role-badge.gerencia{background:rgba(0,176,255,.12);border:1px solid rgba(0,176,255,.28);color:var(--c)}
+
+/* ── Panel Admin de usuarios ── */
+.users-panel{margin-top:16px}
+.urow{
+  display:flex;align-items:center;gap:11px;
+  background:rgba(0,230,118,.04);border:1px solid var(--bo);
+  border-radius:10px;padding:11px 13px;margin-bottom:8px;
+}
+.u-av{
+  width:38px;height:38px;border-radius:50%;
+  background:var(--g2);color:#000;font-weight:800;font-size:.8rem;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.u-av.gerencia{background:var(--c)}
+.u-info{flex:1;min-width:0}
+.u-nm{font-size:.8rem;font-weight:700;color:var(--w)}
+.u-em{font-size:.62rem;color:var(--dim);font-weight:500;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.u-rl{font-size:.56rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.u-rl.admin{color:var(--g)} .u-rl.gerencia{color:var(--c)}
+</style>
+</head>
+<body>
+<div class="tc" id="TC"></div>
+
+<!-- ═══ AUTH OVERLAY ═══ -->
+<div id="authOverlay">
+  <div class="auth-card">
+    <img class="auth-logo" src="https://i.pinimg.com/originals/d8/69/1d/d8691d0911c35769fa26ef6bc82cefc0.jpg" alt="logo">
+    <div class="auth-title">PRE CRÍAS · NERV</div>
+    <div class="auth-sub">Sistema de monitoreo acuícola</div>
+    <label class="auth-lbl">Correo electrónico</label>
+    <input class="auth-inp" type="email" id="authEmail" placeholder="usuario@empresa.com" autocomplete="username" inputmode="email">
+    <label class="auth-lbl">Contraseña</label>
+    <input class="auth-inp" type="password" id="authPass" placeholder="••••••••" autocomplete="current-password">
+    <div class="auth-err" id="authErr"></div>
+    <div class="auth-loading" id="authLoading">⏳ Verificando...</div>
+    <div id="offlineLoginHint" style="display:none;background:rgba(0,176,255,.08);border:1px solid rgba(0,176,255,.25);border-radius:9px;padding:10px 13px;font-size:.68rem;color:var(--c);font-weight:500;margin-top:10px;text-align:center">📵 Sin conexión — login offline disponible si ya iniciaste sesión antes</div>
+    <button class="auth-btn" id="authBtn">🔐 Iniciar sesión</button>
+  </div>
+</div>
+
+<!-- ═══ MENÚ USUARIO ═══ -->
+<div id="userMenu">
+  <div class="umsheet">
+    <div class="um-handle"></div>
+    <div id="umName" class="um-name"></div>
+    <div id="umEmail" class="um-email"></div>
+    <div id="umRoleBadge" class="um-role-badge"></div>
+
+    <!-- Cambiar contraseña -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">CAMBIAR CONTRASEÑA</div>
+      <input class="auth-inp" type="password" id="pwCurrent" placeholder="Contraseña actual" style="margin-bottom:8px">
+      <input class="auth-inp" type="password" id="pwNew" placeholder="Nueva contraseña (mín. 6 caracteres)" style="margin-bottom:8px">
+      <input class="auth-inp" type="password" id="pwConfirm" placeholder="Confirmar nueva contraseña">
+      <div class="auth-err" id="pwErr" style="margin-top:8px"></div>
+      <button class="btn pr full" id="btnChangePw" style="margin-top:10px">🔑 Cambiar contraseña</button>
+    </div>
+
+    <!-- Panel admin: gestión de usuarios -->
+    <div id="adminPanel" style="display:none">
+      <div style="font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:14px 0 10px;border-top:1px solid var(--bo);padding-top:14px">GESTIÓN DE USUARIOS</div>
+      <div id="usersList" class="users-panel"></div>
+      <div style="margin-top:12px;padding:14px;background:rgba(0,230,118,.04);border:1px solid var(--bo);border-radius:10px">
+        <div style="font-size:.6rem;font-weight:700;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">CREAR USUARIO</div>
+        <input class="auth-inp" type="text" id="newUserName" placeholder="Nombre completo" style="margin-bottom:7px">
+        <input class="auth-inp" type="email" id="newUserEmail" placeholder="Correo electrónico" style="margin-bottom:7px">
+        <input class="auth-inp" type="password" id="newUserPass" placeholder="Contraseña inicial" style="margin-bottom:7px">
+        <select id="newUserRole" style="margin-bottom:10px;width:100%;padding:11px 14px;border-radius:9px;border:1px solid rgba(0,230,118,.18);background:rgba(0,0,0,.4);color:var(--w);font-family:var(--F);font-size:.85rem;appearance:none">
+          <option value="admin">Administrador</option>
+          <option value="gerencia">Gerencia (solo lectura)</option>
+        </select>
+        <div class="auth-err" id="newUserErr" style="margin-bottom:8px"></div>
+        <button class="btn pr full" id="btnCreateUser">➕ Crear usuario</button>
+      </div>
+    </div>
+
+    <div style="margin-top:18px;border-top:1px solid var(--bo);padding-top:16px">
+      <button class="btn dn full" id="btnLogout">🚪 Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="tc" id="TC"></div>
+<div class="scl"></div>
+<div class="tc" id="TC"></div>
+
+<!-- ═══ MODAL HISTORIAL ═══ -->
+<div class="mover" id="modH">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mhead">
+      <span class="mtitle" id="mTit">HISTORIAL</span>
+      <button class="btn dn xs" id="mClose">✕</button>
+    </div>
+    <div class="mtabs">
+      <button class="stab ac" data-mt="alimento">🍽 ALIMENTO</button>
+      <button class="stab" data-mt="quimicos">🧪 QUÍMICOS</button>
+      <button class="stab" data-mt="agua">💧 AGUA</button>
+      <button class="stab" data-mt="pesos">⚖ PESOS</button>
+      <button class="stab" data-mt="ciclos">🔄 CICLOS</button>
+      <button class="stab" data-mt="completo">📋 COMPLETO</button>
+    </div>
+    <div class="mbody" id="mBody"></div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- APPBAR -->
+  <div class="appbar">
+    <div class="alogo"></div>
+    <div style="flex:1;min-width:0">
+      <div class="atitle">PRE CRÍAS · NERV</div>
+      <div class="asub">Monitoreo acuícola empresarial</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="sdot" id="sdot"></div>
+      <div class="user-chip" id="userChip" onclick="document.getElementById('userMenu').classList.add('op')" style="display:none">
+        <div class="user-avatar" id="chipAvatar">?</div>
+        <div>
+          <div class="user-name" id="chipName">—</div>
+          <div class="user-role" id="chipRole">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: PILAS -->
+  <div class="page ac" id="pgHome">
+    <div class="fbbanner" id="fbBanner">
+      ⚠️ <strong>Firebase no configurado.</strong> Datos guardados solo en este dispositivo.
+      Para sincronizar entre usuarios:
+      <ol>
+        <li>Ir a <code>console.firebase.google.com</code> → Crear proyecto</li>
+        <li>Agregar app Web → copiar <code>firebaseConfig</code></li>
+        <li>Activar <strong>Firestore Database</strong> (modo prueba)</li>
+        <li>Pegar valores en el bloque <code>&lt;script type="module"&gt;</code> del HTML</li>
+      </ol>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="dash">
+      <div class="dc"><div class="dv" id="dP">0</div><div class="dl">Estanques activos</div></div>
+      <div class="dc"><div class="dv r" id="dA">0</div><div class="dl">Alertas O₂</div></div>
+      <div class="dc"><div class="dv" id="dEH">0</div><div class="dl">Eventos hoy</div></div>
+      <div class="dc"><div class="dv y" id="dEM">0</div><div class="dl">Eventos mañana</div></div>
+      <div class="dc full">
+        <div class="di"><div class="dv c" id="dHA">0</div><div class="dl">Hectáreas</div></div>
+        <div class="di"><div class="dv" id="dLarv">0</div><div class="dl">Larvas sembr.</div></div>
+        <div class="di"><div class="dv y" id="dDens">—</div><div class="dl">Dens. prom</div></div>
+      </div>
+      <div class="dc full">
+        <div class="di"><div class="dv c" id="dPP">—</div><div class="dl">Peso prom (g)</div></div>
+        <div class="di"><div class="dv" id="dC">0</div><div class="dl">Ciclos</div></div>
+        <div class="di"><div class="dv" id="dR">0</div><div class="dl">Registros</div></div>
+        <div class="di"><div class="dv" style="color:#c084fc" id="dCos">0</div><div class="dl">Cosechados</div></div>
+      </div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="card" style="padding:10px 13px">
+      <div class="brow" style="margin-bottom:8px">
+        <input type="text" id="buscar" placeholder="🔍 Buscar estanque..." style="flex:1">
+        <button class="btn sm" id="bON">🔤</button>
+        <button class="btn sm" id="bOF">📅</button>
+        <button class="btn sm" id="bFiltCos" style="font-size:.6rem">🦐</button>
+      </div>
+      <div id="syncSt" style="font-size:.6rem;color:var(--dim);min-height:12px;text-align:center"></div>
+    </div>
+
+    <div id="listaPilas"></div>
+  </div>
+
+  <!-- PAGE: NUEVA PILA -->
+  <div class="page" id="pgNueva">
+    <div class="card">
+      <div class="ct">＋ NUEVO ESTANQUE</div>
+      <span class="lbl">Identificador del estanque</span>
+      <select id="selPId">
+        <option value="">— Seleccionar —</option>
+        <option>22</option><option>38</option><option>50</option>
+        <option>51</option><option>52</option><option>60</option>
+        <option>67</option><option>68</option><option>69</option>
+        <option>116</option>
+        <option value="__">✏ Otra...</option>
+      </select>
+      <input type="text" id="pCust" placeholder="Nombre personalizado" style="display:none;margin-top:7px">
+      <span class="lbl">Nombre del ciclo inicial</span>
+      <input type="text" id="cNom" placeholder="ej: Ciclo 1 — Lote A">
+      <span class="lbl">Fecha de siembra</span>
+      <input type="date" id="cFec">
+      <span class="lbl">Larvas sembradas (unidades)</span>
+      <input type="number" id="cLarvas" placeholder="ej: 2500000" step="1" oninput="calcDensNueva()">
+      <span class="lbl">Hectáreas (personalizado)</span>
+      <input type="number" id="cHaCust" placeholder="Se llena automático si la pila tiene ha definidas" step="0.01" oninput="calcDensNueva()">
+      <div id="densCalc" style="font-size:.65rem;color:var(--g);margin:4px 0 2px;min-height:16px;letter-spacing:.04em"></div>
+      <input type="hidden" id="cDens">
+      <span class="lbl">Responsable — opcional</span>
+      <input type="text" id="cResp" placeholder="Nombre del técnico">
+      <span class="lbl">Mortalidad diaria estimada (%)</span>
+      <input type="number" id="cMort" placeholder="ej: 0.5" step="0.01" min="0" max="100" value="0.5">
+      <div style="font-size:.6rem;color:var(--dim);margin:3px 0 8px;line-height:1.5">Se usa para estimar la sobrevivencia actual según los días transcurridos.</div>
+      <button class="btn pr full" id="btnCP" style="margin-top:14px">✅ CREAR ESTANQUE</button>
+    </div>
+  </div>
+
+  <!-- PAGE: CALENDARIO -->
+  <div class="page" id="pgCal">
+    <div class="card">
+      <div class="ct">📅 CALENDARIO SEMANAL</div>
+      <div class="calg" id="calGrid"></div>
+    </div>
+    <div class="card" id="calEvts"></div>
+  </div>
+
+  <!-- PAGE: REPORTES -->
+  <div class="page" id="pgRep">
+
+    <!-- KPIs globales rápidos -->
+    <div id="repKpis" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:4px"></div>
+
+    <!-- Tabla estanques activos -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bo)">
+        <div>
+          <div style="font-size:.55rem;letter-spacing:.14em;color:var(--dim);text-transform:uppercase">Ciclo actual</div>
+          <div style="font-size:.85rem;font-weight:700;color:var(--w);margin-top:1px">Resumen de estanques</div>
+        </div>
+        <span id="repFecha" style="font-size:.58rem;color:var(--dim);font-family:var(--FM)"></span>
+      </div>
+      <div id="resumenPC" style="padding:0"></div>
+    </div>
+
+    <!-- Indicadores globales -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 16px 10px;border-bottom:1px solid var(--bo)">
+        <div style="font-size:.55rem;letter-spacing:.14em;color:var(--dim);text-transform:uppercase">Consolidado</div>
+        <div style="font-size:.85rem;font-weight:700;color:var(--w);margin-top:1px">Indicadores productivos</div>
+      </div>
+      <div id="indicGlobal" style="padding:14px 16px"></div>
+    </div>
+
+    <!-- Gráfico peso -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 16px 10px;border-bottom:1px solid var(--bo);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.55rem;letter-spacing:.14em;color:var(--dim);text-transform:uppercase">Curva de crecimiento</div>
+          <div style="font-size:.85rem;font-weight:700;color:var(--w);margin-top:1px">Evolución de peso</div>
+        </div>
+        <select id="selGP" style="font-size:.65rem;padding:7px 10px;min-width:120px"></select>
+      </div>
+      <div style="padding:12px 14px">
+        <div class="chbox"><canvas id="gP"></canvas></div>
+        <div id="gInfo" style="font-size:.58rem;color:var(--dim);text-align:center;margin-top:6px"></div>
+      </div>
+    </div>
+
+    <!-- Gráfico oxígeno -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 16px 10px;border-bottom:1px solid var(--bo);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.55rem;letter-spacing:.14em;color:var(--dim);text-transform:uppercase">Calidad de agua</div>
+          <div style="font-size:.85rem;font-weight:700;color:var(--w);margin-top:1px">Tendencia de oxígeno</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <select id="selGOP" style="font-size:.65rem;padding:7px 10px;min-width:110px"></select>
+          <select id="selGOH" style="font-size:.65rem;padding:7px 10px">
+            <option>3:00</option><option>5:00</option><option>17:00</option><option>22:00</option>
+          </select>
+        </div>
+      </div>
+      <div style="padding:12px 14px">
+        <div class="chbox"><canvas id="gO"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Exportar -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 16px 10px;border-bottom:1px solid var(--bo)">
+        <div style="font-size:.55rem;letter-spacing:.14em;color:var(--dim);text-transform:uppercase">Herramientas</div>
+        <div style="font-size:.85rem;font-weight:700;color:var(--w);margin-top:1px">Exportar datos</div>
+      </div>
+      <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <button class="btn sm" id="bCSV" style="flex-direction:column;gap:3px;padding:12px 6px;font-size:.6rem">
+          <span style="font-size:1.1rem">📊</span>CSV
+        </button>
+        <button class="btn sm pr" id="bPDF" style="flex-direction:column;gap:3px;padding:12px 6px;font-size:.6rem">
+          <span style="font-size:1.1rem">📄</span>PDF
+        </button>
+        <button class="btn sm inf" id="bBK" style="flex-direction:column;gap:3px;padding:12px 6px;font-size:.6rem">
+          <span style="font-size:1.1rem">💾</span>Backup
+        </button>
+      </div>
+      <div style="padding:0 16px 14px">
+        <input type="file" id="rFile" accept=".json" style="display:none">
+        <button class="btn sm full wn" id="bRest">📂 Restaurar backup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: AJUSTES -->
+  <div class="page" id="pgAj">
+    <div class="card">
+      <div class="ct">⚙ AJUSTES</div>
+      <div class="sset">
+        <div><div class="slbl">Notificaciones</div><div class="ssub">Alertas persistentes de eventos y O₂ bajo — funcionan con la app cerrada</div></div>
+        <div class="toggle" id="tgNotif"></div>
+      </div>
+      <div class="sset">
+        <div><div class="slbl">Estado Firebase</div><div class="ssub" id="fbSt">Configurado ✅</div></div>
+        <button class="btn xs inf" id="bFbInfo">ℹ Cómo</button>
+      </div>
+      <div class="sset">
+        <div><div class="slbl">Sincronización forzada</div><div class="ssub">Subir todos los datos ahora</div></div>
+        <button class="btn xs" id="bSyncF">☁ Sync</button>
+      </div>
+      <div class="sep"></div>
+      <div class="sset">
+        <div><div class="slbl">Versión</div><div class="ssub">NERV Pre Crías Pro v5.0 · Firebase Auth + Firestore · FCA basado en alimento · Sobrevivencia diaria · Larvas en unidades · Estanques · PDF mejorado</div></div>
+        <span class="tag">2026</span>
+      </div>
+      <div class="sep"></div>
+      <button class="btn dn full xs" id="bBorrar" style="margin-top:6px">🗑 Borrar todos los datos locales</button>
+    </div>
+    <div class="card" id="fbSetupCard" style="display:none">
+      <div class="ct">🔥 CONFIGURAR FIREBASE</div>
+      <p style="font-size:.7rem;color:var(--dim);line-height:1.8">
+        La aplicación ya tiene las credenciales de Firebase integradas.
+        Si deseas usar otro proyecto, edita el bloque <code>&lt;script type="module"&gt;</code>.
+      </p>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- BOTTOM NAV -->
+<div class="bnav">
+  <button class="nb ac" data-pg="pgHome"><span class="ico">🦐</span>estanques</button>
+  <button class="nb" data-pg="pgNueva"><span class="ico">＋</span>nuevo</button>
+  <button class="nb" data-pg="pgCal"><span class="ico">📅</span>agenda</button>
+  <button class="nb" data-pg="pgRep"><span class="ico">📊</span>reportes</button>
+  <button class="nb" data-pg="pgAj"><span class="ico">⚙</span>ajustes</button>
+</div>
+
+<!-- BANNER PWA -->
+<div id="pwaInstall">
+  <span style="font-size:1.6rem">📲</span>
+  <div class="pwaText">
+    <b>Instalar como App</b>
+    Abre sin internet y guarda datos localmente
+  </div>
+  <button class="btn sm pr" id="pwaBtn">Instalar</button>
+  <button class="btn xs dn" id="pwaDismiss" style="padding:6px 8px">✕</button>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   CONSTANTES
+══════════════════════════════════════════ */
+const HORARIOS = ["3:00","5:00","17:00","22:00"];
+const PESO_OBJ = {3:.5,6:.9,9:1.6,12:2.2,15:3.0,18:3.8,21:5.0};
+const DIAS_MUESTREO = [3,6,9,12,15,18,21]; // Muestreo cada 3 días
+// ── EVENTOS POR DÍA — basado en Procedimiento Operacional Pre Crías ──
+// Día 3  : Pro-2 (3g/kg alim) + Megapallet ligante
+// Día 4  : Recambio de agua (medir amonio antes)
+// Días 5,12: CaCO₃ 10kg/ha + Epizym PST 200g/ha + Pro-W 15g/ha
+// Día 6,13: Tecnosilix 15kg/ha
+// Días 10,17: Pro-2 mantenimiento (1g/kg alim) + Megapallet ligante
+// Día 11,18: Recambio de agua (medir amonio antes)
+// Día 19   : CaCO₃ 10kg/ha + Epizym PST 200g/ha (sin Pro-W)
+const EVENTOS  = {
+  3:["⚖ Muestreo de peso","💊 Pro-2 · 3g/kg alimento (3 raciones AM) + Megapallet 20g/bolsa"],
+  4:["💧 Recambio de agua — medir amonio antes · ½ tabla entrada/salida"],
+  5:["🧴 CaCO₃ · 10kg/ha","🦠 Epizym PST · 200g/ha (activar 4h en 20L agua)","💧 Pro-W · 15g/ha (activar 30-40min en 20L agua)"],
+  6:["⚖ Muestreo de peso","🌱 Tecnosilix · 15kg/ha (proliferación de diatomeas)"],
+  9:["⚖ Muestreo de peso"],
+  10:["💊 Pro-2 mantenimiento · 1g/kg alimento (3 raciones AM) + Megapallet 20g/bolsa"],
+  11:["⚖ Muestreo de peso (si aplica)","💧 Recambio de agua — medir amonio antes · ½ tabla entrada/salida"],
+  12:["⚖ Muestreo de peso","🧴 CaCO₃ · 10kg/ha","🦠 Epizym PST · 200g/ha (activar 4h en 20L agua)","💧 Pro-W · 15g/ha (activar 30-40min en 20L agua)"],
+  13:["🌱 Tecnosilix · 15kg/ha (proliferación de diatomeas)"],
+  15:["⚖ Muestreo de peso"],
+  17:["💊 Pro-2 mantenimiento · 1g/kg alimento (3 raciones AM) + Megapallet 20g/bolsa"],
+  18:["⚖ Muestreo de peso","💧 Recambio de agua — medir amonio antes · ½ tabla entrada/salida"],
+  19:["🧴 CaCO₃ · 10kg/ha","🦠 Epizym PST · 200g/ha (activar 4h en 20L agua)"],
+  21:["⚖ Muestreo de peso","🦐 COSECHA — Evaluación final"]
+};
+const ALIM_SUG = [
+  "ARECA CAMARÓN 40% 500-1200","ALIMENTO SKRETTING LORICA 42%",
+  "ARECA CAMARÓN 35% 300-500","CAMARONINA PURINA",
+  "ZIEGLER LARVAL AP-100","ALGAMAC 3050","ARTEMIA NAUPLIOS",
+  "PASTILLAS LARVALES","MICROALGAS CONCENTRADAS"
+];
+const QUIM_SUG = [
+  "Epizym PST","Sanolife Pro-w","Sanolife Pro-2","Megapellet",
+  "Carbonato de calcio","Hidróxido de calcio","Epizym Pills",
+  "Tecnosilix","Propiomax","EDTA","Vitamina C","Probiótico"
+];
+// Hectáreas de cada pila
+const PILA_HA = {"22":4.31,"38":3.86,"50":5.71,"51":6.50,"52":5.18,"60":7,"67":7,"68":7,"69":7,"116":7.70};
+const QUIM_UNID = {"Carbonato de calcio":"kg","Hidróxido de calcio":"kg"};
+const PESO_SACO = {"ARECA CAMARÓN 40% 500-1200":25,"ALIMENTO SKRETTING LORICA 42%":22.67};
+const COLORS    = ["#00ff8c","#ff2d55","#00d4ff","#ffd60a","#c084fc","#fb923c","#34d399","#f472b6"];
+
+/* ══════════════════════════════════════════
+   ESTADO
+══════════════════════════════════════════ */
+let pilas      = [];
+let notifOn    = false;
+let orden      = "nombre";
+let filtro     = "";
+let filtroCos  = false; // false = mostrar todas, true = ocultar cosechadas
+let expandidas = new Set();
+let modPilaId  = null;
+let modTab     = "alimento";
+let gPInst     = null;
+let gOInst     = null;
+let idb        = null;
+let aRowCount  = {};
+
+/* ══════════════════════════════════════════
+   INDEXEDDB
+══════════════════════════════════════════ */
+function abrirIDB() {
+  return new Promise((res,rej)=>{
+    const q = indexedDB.open("NervPreCrias",3);
+    q.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains("pilas"))
+        db.createObjectStore("pilas",{keyPath:"id"});
+    };
+    q.onsuccess = e => { idb=e.target.result; res(idb); };
+    q.onerror   = ()=> rej(q.error);
+  });
+}
+async function idbGuardar() {
+  if (!idb) return;
+  const tx = idb.transaction("pilas","readwrite");
+  const st = tx.objectStore("pilas");
+  await new Promise(r=>{ st.clear().onsuccess=r; });
+  for (const p of pilas)
+    await new Promise(r=>{ st.put(p).onsuccess=r; });
+}
+async function idbCargar() {
+  if (!idb) return [];
+  const tx = idb.transaction("pilas","readonly");
+  return new Promise((res,rej)=>{
+    const q = tx.objectStore("pilas").getAll();
+    q.onsuccess = ()=>res(q.result||[]);
+    q.onerror   = ()=>rej(q.error);
+  });
+}
+
+/* ══════════════════════════════════════════
+   FIREBASE (YA ACTIVO CON CREDENCIALES REALES)
+══════════════════════════════════════════ */
+async function fbSubir(p) {
+  if (!window._fbReady) return;
+  const {doc,setDoc,serverTimestamp,collection} = window._fb;
+  try { await setDoc(doc(collection(window._fbDB,"pilas"),String(p.id)),{...p,_ts:serverTimestamp()}); }
+  catch(e){ console.warn("fbSubir:",e); }
+}
+async function fbBorrar(id) {
+  if (!window._fbReady) return;
+  const {doc,deleteDoc,collection} = window._fb;
+  try { await deleteDoc(doc(collection(window._fbDB,"pilas"),String(id))); } catch(e){}
+}
+async function fbCargar() {
+  if (!window._fbReady) return null;
+  const {getDocs,collection} = window._fb;
+  try {
+    const snap = await getDocs(collection(window._fbDB,"pilas"));
+    return snap.docs.map(d=>{ const x={...d.data()}; delete x._ts; return x; });
+  } catch(e){ return null; }
+}
+function fbEscuchar() {
+  if (!window._fbReady) return;
+  const {onSnapshot,collection} = window._fb;
+  onSnapshot(collection(window._fbDB,"pilas"), snap=>{
+    snap.docChanges().forEach(ch=>{
+      if (ch.type==="added"||ch.type==="modified") {
+        const d={...ch.doc.data()}; delete d._ts;
+        const idx=pilas.findIndex(p=>String(p.id)===String(d.id));
+        if (idx>=0) pilas[idx]=d; else pilas.push(d);
+      }
+      if (ch.type==="removed")
+        pilas=pilas.filter(p=>String(p.id)!==ch.doc.id);
+    });
+    idbGuardar(); actualizar(); setSdot("on");
+  }, ()=>setSdot("er"));
+}
+async function syncAll(show=true) {
+  if (!window._fbReady){ if(show) toast("⚠ Firebase no configurado","wn"); return; }
+  setSdot("sy");
+  if(show) setStatus("☁ Sincronizando...");
+  for (const p of pilas) await fbSubir(p);
+  if(show){ setStatus(`✅ Sync ${new Date().toLocaleTimeString()} · ${pilas.length} pilas`); toast("☁ Sync completo"); setTimeout(()=>setStatus(""),5000); }
+  setSdot("on");
+}
+
+/* ══════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════ */
+function toast(msg,type=""){
+  const c=document.getElementById("TC"), t=document.createElement("div");
+  t.className=`tst ${type}`; t.textContent=msg;
+  c.appendChild(t); setTimeout(()=>t.remove(),2700);
+}
+function setStatus(m){ const e=document.getElementById("syncSt"); if(e) e.textContent=m; }
+function setSdot(s){
+  const d=document.getElementById("sdot"); d.className=`sdot ${s}`;
+  d.title={on:"Sincronizado",sy:"Sincronizando…",er:"Error de red","":"Sin conexión"}[s]||"";
+}
+function parseD(s){ if(!s)return new Date(); const[a,m,d]=s.split("-").map(Number); return new Date(a,m-1,d); }
+function diaDe(siembra){ const s=parseD(siembra),h=new Date(); h.setHours(0,0,0,0); return Math.max(0,Math.floor((h-s)/86400000)); }
+function diaParaFecha(siembra, fecha){
+  const s=parseD(siembra), f=parseD(fecha); f.setHours(0,0,0,0);
+  return Math.max(0,Math.floor((f-s)/86400000));
+}
+function fmt(f){ if(!f)return""; const d=parseD(f); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`; }
+function fmtLong(f){ if(!f)return""; const d=parseD(f); return d.toLocaleDateString('es-NI',{weekday:'short',day:'numeric',month:'short',year:'numeric'}); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function notif(t,m){
+  if(!notifOn || Notification.permission!=="granted") return;
+  try {
+    const reg = await navigator.serviceWorker?.ready;
+    if (reg) {
+      reg.active.postMessage({ type:'SHOW_NOTIF', title:t, body:m, tag:'nerv-'+Date.now(), persist:true });
+    } else {
+      new Notification(t, {body:m, icon:'./icons/icon.svg'});
+    }
+  } catch(e){ try{ new Notification(t, {body:m}); }catch(e2){} }
+}
+async function scheduleNotif(t,m,fireAt,tag){
+  try {
+    const reg = await navigator.serviceWorker?.ready;
+    if (reg) reg.active.postMessage({ type:'SCHEDULE_NOTIF', title:t, body:m, fireAt, tag });
+  } catch(e){}
+}
+function getCiclo(p){ return p.ciclos.at(-1); }
+
+/* ── Calcular sobrevivencia con mortalidad diaria + eventos puntuales ── */
+function calcSobrevivencia(ciclo, dia){
+  const mort = ciclo.mortalidadDiaria || 0.5;
+  const larvas = ciclo.larvasSembradas || 0;
+  if(!larvas) return null;
+  // Ordenar eventos de mortalidad por día
+  const eventos = [...(ciclo.eventosMortalidad||[])].sort((a,b)=>a.dia-b.dia);
+  // Simular día a día: mortalidad continua + eventos puntuales
+  let vivos = larvas;
+  for(let d = 1; d <= dia; d++){
+    vivos = vivos * (1 - mort/100);
+    for(const ev of eventos){
+      if(ev.dia === d) vivos = vivos * (1 - ev.reduccion/100);
+    }
+  }
+  vivos = Math.max(0, Math.round(vivos));
+  const pct = +(vivos/larvas*100).toFixed(1);
+  return { animalesVivos: vivos, pct, larvasSembradas: larvas, mortPct: mort };
+}
+
+/* ── Calcular FCA basado en alimento almacenado ── */
+function calcFCA(ciclo){
+  // Total alimento en kg registrado
+  let totalAlimKg = 0;
+  for(const reg of ciclo.alimentoRegistros){
+    for(const item of reg.items){
+      let kg = item.cantidad;
+      if(item.unidad === 'g') kg = kg/1000;
+      else if(item.unidad === 'lb') kg = kg*0.453592;
+      else if(item.unidad === 'sacos') kg = kg*(PESO_SACO[item.nombre]||25);
+      else if(item.unidad === 'L') kg = kg; // assume 1L~1kg for liquid feeds
+      totalAlimKg += kg;
+    }
+  }
+  if(!totalAlimKg) return null;
+  // Total biomasa ganada (g) usando último peso registrado y sobrevivencia
+  const pesos = [...ciclo.pesosRegistros].sort((a,b)=>a.dia-b.dia);
+  const ultP = pesos.at(-1);
+  if(!ultP) return { alimTotal: +totalAlimKg.toFixed(2), fca: null, biomasaKg: null };
+  const dia = ultP.dia;
+  const sobrev = calcSobrevivencia(ciclo, dia);
+  let animalesVivos = sobrev ? sobrev.animalesVivos : null;
+  // Biomasa actual (kg)
+  const biomasaKg = animalesVivos ? +(animalesVivos * ultP.peso / 1000).toFixed(2) : null;
+  // Biomasa inicial (g total * animales sembrados ~ 0 at start)
+  const fca = biomasaKg && biomasaKg > 0 ? +(totalAlimKg / biomasaKg).toFixed(2) : null;
+  return { alimTotal: +totalAlimKg.toFixed(2), fca, biomasaKg, animalesVivos };
+}
+
+/* ══════════════════════════════════════════
+   PERSISTENCIA
+══════════════════════════════════════════ */
+async function guardar(p=null){
+  await idbGuardar();
+  if (window._fbReady){
+    setSdot("sy");
+    if(p) await fbSubir(p); else for(const x of pilas) await fbSubir(x);
+    setSdot("on");
+  }
+  actualizar();
+}
+async function cargarDatos(){
+  const local = await idbCargar();
+  if (!local.length){
+    const old=localStorage.getItem("nerv_precrias_v2")||localStorage.getItem("precrias_pro_final");
+    if(old){ try{ pilas=JSON.parse(old); await idbGuardar(); toast("✅ Datos migrados","inf"); }catch(e){} }
+  } else { pilas=local; }
+
+  if(!pilas.length){
+    const d=new Date(); d.setDate(d.getDate()-3);
+    const f=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    pilas=[{id:Date.now(),nombre:"22",ciclos:[{id:Date.now(),nombre:"Ciclo 1",fechaSiembra:f,densidad:150,responsable:"",alimentoRegistros:[],quimicosRegistros:[],pesosRegistros:[],aguaRegistros:[]}]}];
+  }
+  ordenar(); actualizar();
+
+  if(window._fbReady){
+    setSdot("sy");
+    const fb=await fbCargar();
+    if(fb&&fb.length){
+      const mapa=Object.fromEntries(pilas.map(p=>[String(p.id),p]));
+      for(const fp of fb) mapa[String(fp.id)]=fp;
+      pilas=Object.values(mapa);
+      await idbGuardar(); ordenar(); actualizar();
+      toast("☁ Sincronizado con la nube","inf");
+    }
+    fbEscuchar(); setSdot("on");
+    document.getElementById("fbSt").textContent="Conectado ✅";
+    document.getElementById("fbSt").style.color="var(--g)";
+  } else {
+    setSdot("");
+    document.getElementById("fbBanner").classList.add("sh");
+  }
+}
+
+/* ══════════════════════════════════════════
+   CRUD
+══════════════════════════════════════════ */
+function ordenar(){
+  if(orden==="nombre") pilas.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es',{numeric:true}));
+  else pilas.sort((a,b)=>parseD(getCiclo(a).fechaSiembra)-parseD(getCiclo(b).fechaSiembra));
+}
+async function crearPila(nom,cnom,fecha,dens,resp,mortalidad,larvasIni){
+  if(!nom.trim()||!fecha){ toast("⚠ Nombre y fecha requeridos","wn"); return false; }
+  if(pilas.some(p=>p.nombre.toLowerCase()===nom.trim().toLowerCase())){ toast(`Estanque "${nom}" ya existe`,"er"); return false; }
+  if(!cnom.trim()) cnom="Ciclo 1";
+  const p={id:Date.now(),nombre:nom.trim(),estado:"activa",ciclos:[{id:Date.now(),nombre:cnom.trim(),fechaSiembra:fecha,densidad:dens||null,responsable:resp||null,mortalidadDiaria:mortalidad||0.5,larvasSembradas:larvasIni||0,eventosMortalidad:[],alimentoRegistros:[],quimicosRegistros:[],pesosRegistros:[],aguaRegistros:[]}]};
+  pilas.push(p); expandidas.add(p.id);
+  await guardar(p); notif("NERV",`Estanque ${nom} creado`); toast(`✅ Estanque ${nom} creado`);
+  return true;
+}
+async function agregarCiclo(pilaId,nom,fecha,dens,resp,mortalidad,larvasIni){
+  const p=pilas.find(x=>x.id===pilaId);
+  if(!p||!fecha){ toast("⚠ Fecha requerida","wn"); return false; }
+  if(!nom.trim()) nom=`Ciclo ${p.ciclos.length+1}`;
+  if(!fecha.match(/\d{4}-\d{2}-\d{2}/)){ toast("⚠ Formato de fecha inválido","wn"); return false; }
+  p.ciclos.push({id:Date.now(),nombre:nom.trim(),fechaSiembra:fecha,densidad:dens||null,responsable:resp||null,mortalidadDiaria:mortalidad||0.5,larvasSembradas:larvasIni||0,eventosMortalidad:[],alimentoRegistros:[],quimicosRegistros:[],pesosRegistros:[],aguaRegistros:[]});
+  await guardar(p); toast("Ciclo añadido"); return true;
+}
+async function eliminarPila(id){
+  if(!confirm("¿Eliminar este estanque y todos sus datos? Esta acción no se puede deshacer.")) return;
+  pilas=pilas.filter(p=>p.id!==id); expandidas.delete(id);
+  await idbGuardar();
+  if(window._fbReady) await fbBorrar(id);
+  actualizar(); toast("Estanque eliminado","er");
+}
+
+async function cosecharPila(id){
+  const p=pilas.find(x=>x.id===id); if(!p) return;
+  const ciclo=getCiclo(p);
+  const dia=diaDe(ciclo.fechaSiembra);
+  const conf=confirm(`¿Marcar estanque ${p.nombre} como COSECHADO?\n\nDía ${dia} · Ciclo: ${ciclo.nombre}\n\nEsta acción cerrará el ciclo activo. El historial completo quedará guardado.`);
+  if(!conf) return;
+  p.estado="cosechada";
+  p.fechaCosecha=todayStr();
+  p.diaCosecha=dia;
+  // Guardar resumen de cosecha en el ciclo actual
+  ciclo.cosecha={ fecha:todayStr(), dia, hora:new Date().toLocaleTimeString() };
+  await guardar(p);
+  actualizar();
+  toast(`🦐 Estanque ${p.nombre} cosechado — historial preservado`,"inf");
+  notif("🦐 COSECHA",`Estanque ${p.nombre} cosechado en día ${dia}`);
+}
+async function reactivarPila(id){
+  const p=pilas.find(x=>x.id===id); if(!p) return;
+  if(!confirm(`¿Reactivar estanque ${p.nombre}? Se creará un nuevo ciclo.`)) return;
+  p.estado="activa"; delete p.fechaCosecha; delete p.diaCosecha;
+  await guardar(p); actualizar(); toast(`✅ Estanque ${p.nombre} reactivado`);
+}
+async function regPeso(pilaId,peso,esp,fechaReg){
+  const p=pilas.find(x=>x.id===pilaId); if(!p) return;
+  if(!peso||peso<=0){ toast("⚠ Ingrese un peso válido","wn"); return; }
+  const ciclo=getCiclo(p);
+  const dia=diaParaFecha(ciclo.fechaSiembra, fechaReg||todayStr());
+  const esperado=(esp>0)?esp:(PESO_OBJ[dia]||null);
+  let estado="sin_ref",color="#60a5fa";
+  if(esperado){ const pct=(peso/esperado)*100; color=pct>=90?"#00ff8c":pct>=70?"#ffd60a":"#ff2d55"; estado=pct>=90?"ok":pct>=70?"bajo":"deficit"; }
+  ciclo.pesosRegistros.push({dia,peso,pesoEsperado:esperado,estado,color,fechaReal:fechaReg||todayStr(),hora:new Date().toLocaleTimeString()});
+  await guardar(p); notif("⚖ Peso",`${p.nombre}: ${peso}g día ${dia}`); toast(`⚖ ${peso}g registrado (día ${dia})`);
+}
+async function regAlimento(pilaId,items,fechaReg){
+  const p=pilas.find(x=>x.id===pilaId); if(!p||!items.length) return;
+  const ciclo=getCiclo(p);
+  const dia=diaParaFecha(ciclo.fechaSiembra, fechaReg||todayStr());
+  ciclo.alimentoRegistros.push({dia,items,fechaReal:fechaReg||todayStr(),hora:new Date().toLocaleTimeString()});
+  await guardar(p); notif("🍽 Alimento",`${p.nombre}: ${items.length} producto(s) día ${dia}`);
+  toast(`🍽 Alimento registrado (día ${dia}${fechaReg!==todayStr()?` · ${fmt(fechaReg)}`:''})`);
+}
+async function regQuimico(pilaId,prod,cant,unid,fechaReg){
+  const p=pilas.find(x=>x.id===pilaId); if(!p) return;
+  if(!prod||cant<=0||!unid){ toast("⚠ Complete todos los campos","wn"); return; }
+  const ciclo=getCiclo(p);
+  const dia=diaParaFecha(ciclo.fechaSiembra, fechaReg||todayStr());
+  ciclo.quimicosRegistros.push({dia,producto:prod,cantidad:cant,unidad:unid,fechaReal:fechaReg||todayStr(),hora:new Date().toLocaleTimeString()});
+  await guardar(p); toast(`🧪 Químico registrado (día ${dia})`);
+}
+async function regAgua(pilaId,horario,temp,ox,fechaReg){
+  const p=pilas.find(x=>x.id===pilaId); if(!p) return;
+  const ciclo=getCiclo(p);
+  const dia=diaParaFecha(ciclo.fechaSiembra, fechaReg||todayStr());
+  ciclo.aguaRegistros.push({dia,horario,temperatura:temp,oxigeno:ox,fechaReal:fechaReg||todayStr(),hora:new Date().toLocaleTimeString()});
+  await guardar(p); toast(`💧 Agua ${horario} registrada (día ${dia})`);
+  if(ox<4){ toast(`🚨 O₂ BAJO: ${ox} mg/L en ${p.nombre} ${horario}`,"er"); notif("🚨 ALERTA O₂",`${p.nombre} ${horario}: ${ox} mg/L`); }
+}
+async function eliminarReg(tipo,pilaId,cicloIdx,regIdx){
+  const p=pilas.find(x=>x.id===pilaId);
+  if(!p||!confirm("¿Eliminar este registro?")) return;
+  p.ciclos[cicloIdx][tipo].splice(regIdx,1);
+  await guardar(p); toast("Registro eliminado"); abrirHistorial(pilaId);
+}
+async function regEvMort(pilaId,tipo,reduccion,dia,nota){
+  const p=pilas.find(x=>x.id===pilaId); if(!p) return;
+  if(!reduccion||reduccion<=0||reduccion>=100){ toast("⚠ Ingresa una reducción válida (0-99%)","wn"); return; }
+  const ciclo=getCiclo(p);
+  if(!ciclo.eventosMortalidad) ciclo.eventosMortalidad=[];
+  ciclo.eventosMortalidad.push({id:Date.now(),tipo,reduccion,dia,nota:nota||''});
+  await guardar(p);
+  const sv=calcSobrevivencia(ciclo, dia);
+  toast(`📉 Ajuste registrado — ${reduccion}% reducción día ${dia}${sv?` · Vivos est: ${sv.animalesVivos.toLocaleString()}`:''}`, tipo==='raleo'?'inf':'wn');
+  notif(`📉 ${tipo}`,`${p.nombre}: −${reduccion}% día ${dia}`);
+}
+window.eliminarEvMort=async function(pilaId,evId){
+  const p=pilas.find(x=>x.id===pilaId);
+  if(!p||!confirm("¿Eliminar este evento de mortalidad?")) return;
+  const ciclo=getCiclo(p);
+  ciclo.eventosMortalidad=(ciclo.eventosMortalidad||[]).filter(ev=>ev.id!==evId);
+  await guardar(p); toast("Evento eliminado");
+};
+
+/* ══════════════════════════════════════════
+   PROYECCIÓN O₂
+══════════════════════════════════════════ */
+function proyOx(pilaId,horario){
+  const p=pilas.find(x=>x.id===pilaId); if(!p) return null;
+  const regs=getCiclo(p).aguaRegistros.filter(r=>r.horario===horario).sort((a,b)=>a.dia-b.dia);
+  if(regs.length<2) return null;
+  const n=regs.length; let sx=0,sy=0,sxy=0,sx2=0;
+  for(const r of regs){sx+=r.dia;sy+=r.oxigeno;sxy+=r.dia*r.oxigeno;sx2+=r.dia*r.dia}
+  const m=(n*sxy-sx*sy)/(n*sx2-sx*sx), b=(sy-m*sx)/n;
+  const nd=regs.at(-1).dia+1, pred=+(m*nd+b).toFixed(2);
+  const tend=m>0.02?"↑":m<-0.02?"↓":"→";
+  return{pred,crit:pred<4,tend,msg:`${horario}: ${pred} mg/L ${tend}${pred<4?" ⚠":""}`};
+}
+
+/* ══════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════ */
+function actualizarDash(){
+  let evH=0,evM=0,alO=0,pS=0,pN=0,cT=0,rT=0,cos=0;
+  let totalHA=0,totalLarvas=0,densSum=0,densN=0;
+  for(const p of pilas){
+    const ha=PILA_HA[p.nombre]||0;
+    if(p.estado==="cosechada"){ cos++; continue; }
+    const c=getCiclo(p), dia=diaDe(c.fechaSiembra);
+    if(EVENTOS[dia]) evH++;
+    if(EVENTOS[dia+1]) evM++;
+    if(c.aguaRegistros.slice(-6).some(r=>r.oxigeno<4)) alO++;
+    const ul=c.pesosRegistros.at(-1); if(ul){pS+=ul.peso;pN++;}
+    cT+=p.ciclos.length;
+    rT+=c.alimentoRegistros.length+c.quimicosRegistros.length+c.pesosRegistros.length+c.aguaRegistros.length;
+    totalHA+=ha;
+    if(c.densidad){ densSum+=parseFloat(c.densidad); densN++; }
+    const larvas=c.larvasSembradas ? parseFloat(c.larvasSembradas) : (c.densidad&&ha ? parseFloat(c.densidad)*ha*10000 : 0);
+    totalLarvas+=larvas;
+  }
+  document.getElementById("dP").textContent=pilas.filter(p=>p.estado!=="cosechada").length;
+  document.getElementById("dA").textContent=alO;
+  document.getElementById("dEH").textContent=evH;
+  document.getElementById("dEM").textContent=evM;
+  document.getElementById("dPP").textContent=pN?(pS/pN).toFixed(2):"—";
+  document.getElementById("dC").textContent=cT;
+  document.getElementById("dR").textContent=rT;
+  const dCos=document.getElementById("dCos"); if(dCos) dCos.textContent=cos;
+  const dHA=document.getElementById("dHA"); if(dHA) dHA.textContent=totalHA?totalHA.toFixed(1):"0";
+  const dLarv=document.getElementById("dLarv"); if(dLarv) dLarv.textContent=totalLarvas?Math.round(totalLarvas).toLocaleString():"0";
+  const dDens=document.getElementById("dDens"); if(dDens) dDens.textContent=densN?Math.round(densSum/densN).toLocaleString():"—";
+}
+
+/* ══════════════════════════════════════════
+   CALENDARIO
+══════════════════════════════════════════ */
+function renderCal(){
+  const grid=document.getElementById("calGrid"), evDiv=document.getElementById("calEvts");
+  if(!grid) return;
+  const h=new Date();
+  const dias=Array.from({length:7},(_,i)=>{const d=new Date(h);d.setDate(h.getDate()+i);return d;});
+  const evs=dias.map(()=>[]);
+  for(const p of pilas){
+    const c=getCiclo(p), s=parseD(c.fechaSiembra);
+    for(let i=0;i<7;i++){
+      const diff=Math.floor((dias[i]-s)/86400000);
+      if(diff>=0&&EVENTOS[diff]) evs[i].push({pila:p.nombre,dia:diff,evts:EVENTOS[diff]});
+    }
+  }
+  grid.innerHTML=dias.map((d,i)=>{
+    const l=d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric'});
+    return `<div class="cald ${i===0?'td':''}">
+      <div class="cdname">${l}</div>
+      ${evs[i].map(e=>e.evts.map(()=>`<div class="cev ${i===0?'':'g'}">${e.pila}</div>`).join('')).join('')}
+    </div>`;
+  }).join('');
+  let html='<div class="ct">📌 DETALLE</div>'; let hay=false;
+  for(let i=0;i<7;i++){
+    if(!evs[i].length) continue; hay=true;
+    const l=dias[i].toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+    html+=`<div style="margin-bottom:10px"><div style="font-size:.62rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">${l}</div>`;
+    for(const e of evs[i])
+      html+=`<div class="evi ${i===0?'hoy':i===1?'man':''}">
+        <span class="eday ${i===0?'hoy':i===1?'man':''}">${e.dia}</span>
+        <div><div class="etag">${e.pila}</div><div style="margin-top:2px;font-size:.72rem">${e.evts.join(' · ')}</div></div>
+      </div>`;
+    html+=`</div>`;
+  }
+  if(!hay) html+='<div class="empty">Sin eventos los próximos 7 días</div>';
+  evDiv.innerHTML=html;
+}
+
+/* ══════════════════════════════════════════
+   GRÁFICOS REPORTES
+══════════════════════════════════════════ */
+function poblarSels(){
+  ["selGP","selGOP"].forEach(id=>{
+    const s=document.getElementById(id); if(!s) return;
+    const v=s.value;
+    s.innerHTML=pilas.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+    if(pilas.find(p=>String(p.id)===v)) s.value=v;
+  });
+  renderResumenPC();
+  renderIndicGlobal();
+}
+function renderIndicGlobal(){
+  const el=document.getElementById('indicGlobal'); if(!el) return;
+  const activas=pilas.filter(p=>p.estado!=='cosechada');
+  const cosechadas=pilas.filter(p=>p.estado==='cosechada');
+  if(!activas.length && !cosechadas.length){ el.innerHTML='<div class="empty" style="padding:20px 0">Sin datos disponibles aún.</div>'; return; }
+  let fcaVals=[], svVals=[], totalAlim=0, totalBiomasa=0, totalAnimVivos=0, diasProm=0, nDias=0;
+  for(const p of activas){
+    const cx=getCiclo(p);
+    const dia=diaDe(cx.fechaSiembra);
+    const sv=calcSobrevivencia(cx,dia);
+    const fc=calcFCA(cx);
+    if(sv){ svVals.push(sv.pct); totalAnimVivos+=sv.animalesVivos; }
+    if(fc){ totalAlim+=fc.alimTotal; if(fc.biomasaKg) totalBiomasa+=fc.biomasaKg; if(fc.fca!==null) fcaVals.push(fc.fca); }
+    diasProm+=dia; nDias++;
+  }
+  const fcaProm=fcaVals.length?+(fcaVals.reduce((a,b)=>a+b,0)/fcaVals.length).toFixed(2):null;
+  const svProm=svVals.length?+(svVals.reduce((a,b)=>a+b,0)/svVals.length).toFixed(1):null;
+  const fcaGlobal=totalBiomasa>0?+(totalAlim/totalBiomasa).toFixed(2):null;
+  const diaMedio=nDias?Math.round(diasProm/nDias):0;
+
+  function kpi(label, val, sub, col, bg){
+    return `<div style="background:${bg};border-radius:var(--rsm);padding:13px 14px;position:relative;overflow:hidden">
+      <div style="font-size:.5rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">${label}</div>
+      <div style="font-size:1.45rem;font-family:var(--FM);font-weight:700;color:${col};line-height:1">${val}</div>
+      <div style="font-size:.56rem;color:rgba(255,255,255,.35);margin-top:5px;line-height:1.4">${sub}</div>
+    </div>`;
+  }
+
+  el.innerHTML = `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+    ${kpi('FCA global', fcaGlobal!==null?fcaGlobal:'—', `${totalAlim.toFixed(1)} kg alim · ${totalBiomasa.toFixed(1)} kg biomasa`, '#ffc400', 'rgba(255,196,0,.08)')}
+    ${kpi('Sobrev. promedio', svProm!==null?svProm+'%':'—', `${activas.length} estanques activos`, svProm&&svProm<70?'#ff5252':svProm&&svProm<85?'#ffc400':'#00e676', 'rgba(0,230,118,.06)')}
+    ${kpi('Animales vivos est.', totalAnimVivos>0?totalAnimVivos.toLocaleString():'—', `Suma estimada de estanques activos`, '#00b0ff', 'rgba(0,176,255,.06)')}
+    ${kpi('Día prom. de ciclo', diaMedio||'—', `FCA ind. prom: ${fcaProm!==null?fcaProm:'—'}`, '#ce93d8', 'rgba(206,147,216,.06)')}
+  </div>
+
+  ${cosechadas.length?`
+  <div style="border-top:1px solid var(--bo);padding-top:14px">
+    <div style="font-size:.52rem;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px">Estanques cosechados — historial</div>
+    ${cosechadas.map(p=>{
+      const cx=getCiclo(p);
+      const fc=calcFCA(cx);
+      const sv=p.diaCosecha?calcSobrevivencia(cx,p.diaCosecha):null;
+      const ultP=cx.pesosRegistros.at(-1);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(192,132,252,.05);border:1px solid rgba(192,132,252,.12);border-radius:var(--rsm);margin-bottom:7px">
+        <span style="font-size:1.1rem">🦐</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.7rem;font-weight:700;color:#c084fc">${esc(p.nombre)}</div>
+          <div style="font-size:.58rem;color:var(--dim);margin-top:2px">
+            Día ${p.diaCosecha||'—'} · Peso final: ${ultP?ultP.peso.toFixed(2)+'g':'—'} · Sobrev: ${sv?sv.pct+'%':'—'} · FCA: ${fc&&fc.fca!==null?fc.fca:'—'}
+          </div>
+        </div>
+        <div style="font-size:.56rem;color:rgba(192,132,252,.6);text-align:right">${fmt(p.fechaCosecha||'')}</div>
+      </div>`;
+    }).join('')}
+  </div>`:''}`;
+}
+
+function renderResumenPC(){
+  const el=document.getElementById('resumenPC'); if(!el) return;
+  const repFecha=document.getElementById('repFecha');
+  if(repFecha) repFecha.textContent=fmtLong(todayStr());
+  const activas=pilas.filter(p=>p.estado!=='cosechada');
+  const kpis=document.getElementById('repKpis');
+  if(!activas.length){
+    el.innerHTML='<div style="padding:20px 16px;color:var(--dim);font-size:.72rem;text-align:center">Sin estanques activos.</div>';
+    if(kpis) kpis.innerHTML=''; return;
+  }
+
+  // Top KPI strip
+  const dias=activas.map(p=>diaDe(getCiclo(p).fechaSiembra));
+  const promDia=Math.round(dias.reduce((a,b)=>a+b,0)/dias.length);
+  const conPeso=activas.filter(p=>getCiclo(p).pesosRegistros.length>0).length;
+  const totalHA=activas.reduce((a,p)=>a+(PILA_HA[p.nombre]||0),0);
+  const totalEv=activas.reduce((a,p)=>a+(getCiclo(p).eventosMortalidad||[]).length,0);
+  if(kpis) kpis.innerHTML=[
+    {ico:'🌊',v:activas.length,l:'Estanques activos',c:'var(--g)'},
+    {ico:'📐',v:totalHA.toFixed(1)+' ha',l:'Hectáreas totales',c:'var(--c)'},
+    {ico:'📅',v:'Día '+promDia,l:'Promedio de ciclo',c:'var(--y)'},
+    {ico:'⚖',v:conPeso+'/'+activas.length,l:'Con peso registrado',c:'#ce93d8'},
+  ].map(k=>`<div style="background:var(--s1);border:1px solid var(--bo);border-radius:var(--rsm);padding:12px 11px;display:flex;align-items:center;gap:9px">
+    <span style="font-size:1.3rem;line-height:1">${k.ico}</span>
+    <div style="min-width:0">
+      <div style="font-size:.85rem;font-family:var(--FM);font-weight:700;color:${k.c};line-height:1">${k.v}</div>
+      <div style="font-size:.52rem;color:var(--dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k.l}</div>
+    </div>
+  </div>`).join('');
+
+  // Table
+  let html=`<div style="overflow-x:auto">
+  <table style="width:100%;border-collapse:collapse;font-size:.67rem;min-width:520px">
+    <thead>
+      <tr style="border-bottom:2px solid var(--bo)">
+        <th style="padding:10px 14px;text-align:left;font-size:.52rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap">Estanque</th>
+        <th style="padding:10px 10px;text-align:center;font-size:.52rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.1em">Día</th>
+        <th style="padding:10px 10px;text-align:right;font-size:.52rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.1em">Peso</th>
+        <th style="padding:10px 10px;text-align:right;font-size:.52rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.1em">Sobrev.</th>
+        <th style="padding:10px 10px;text-align:right;font-size:.52rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.1em">Vivos est.</th>
+        <th style="padding:10px 10px;text-align:right;font-size:.52rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.1em">FCA</th>
+        <th style="padding:10px 14px;text-align:center;font-size:.52rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.1em">Estado</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  let totHA=0, totAnim=0;
+  for(const p of activas){
+    const cx=getCiclo(p);
+    const ha=PILA_HA[p.nombre]||0;
+    const dens=cx.densidad?Number(cx.densidad):0;
+    const animales=dens&&ha?(dens*ha*10000):0;
+    const dia=diaDe(cx.fechaSiembra);
+    const ultP=cx.pesosRegistros.at(-1);
+    const alO2=cx.aguaRegistros.slice(-4).some(r=>r.oxigeno<4);
+    const sv=calcSobrevivencia(cx,dia);
+    const fcaData=calcFCA(cx);
+    const evN=(cx.eventosMortalidad||[]).length;
+    totHA+=ha; totAnim+=animales;
+
+    const svCol=sv&&sv.pct<70?'var(--r)':sv&&sv.pct<85?'var(--y)':'var(--g)';
+    const fcaCol=fcaData&&fcaData.fca!==null?(fcaData.fca>2?'var(--r)':fcaData.fca>1.5?'var(--y)':'var(--g)'):'var(--dim)';
+    const estadoBadge=alO2
+      ?'<span style="background:rgba(255,82,82,.15);color:var(--r);padding:3px 8px;border-radius:var(--pill);font-size:.52rem;font-weight:700">⚠ O₂</span>'
+      :'<span style="background:rgba(0,230,118,.1);color:var(--g);padding:3px 8px;border-radius:var(--pill);font-size:.52rem;font-weight:700">Activo</span>';
+
+    html+=`<tr style="border-bottom:1px solid rgba(0,230,118,.05)">
+      <td style="padding:11px 14px">
+        <div style="font-weight:700;color:var(--w);font-size:.72rem">${esc(p.nombre)}</div>
+        <div style="font-size:.54rem;color:var(--dim);margin-top:2px">${ha?ha.toFixed(2)+' ha':'sin ha'} · ${dens?dens.toLocaleString()+' larv/m²':'sin densidad'}${evN?` · <span style="color:var(--r)">${evN} evento${evN!==1?'s':''}</span>`:''}</div>
+      </td>
+      <td style="padding:11px 10px;text-align:center;font-family:var(--FM);color:var(--c);font-weight:700">${dia}</td>
+      <td style="padding:11px 10px;text-align:right;font-family:var(--FM);color:${ultP?'var(--w)':'var(--dim)'}">${ultP?ultP.peso.toFixed(2)+'g':'—'}</td>
+      <td style="padding:11px 10px;text-align:right;font-family:var(--FM);color:${svCol};font-weight:700">${sv?sv.pct+'%':'—'}</td>
+      <td style="padding:11px 10px;text-align:right;font-family:var(--FM);color:var(--w);font-size:.62rem">${sv?sv.animalesVivos.toLocaleString():'—'}</td>
+      <td style="padding:11px 10px;text-align:right;font-family:var(--FM);color:${fcaCol};font-weight:700">${fcaData&&fcaData.fca!==null?fcaData.fca:'—'}</td>
+      <td style="padding:11px 14px;text-align:center">${estadoBadge}</td>
+    </tr>`;
+  }
+
+  html+=`</tbody>
+    <tfoot>
+      <tr style="border-top:2px solid var(--bo);background:rgba(0,230,118,.03)">
+        <td style="padding:10px 14px;font-weight:700;color:var(--g);font-size:.65rem">TOTAL / PROMEDIO</td>
+        <td style="padding:10px 10px;text-align:center;font-family:var(--FM);color:var(--dim);font-size:.62rem">—</td>
+        <td style="padding:10px 10px"></td>
+        <td style="padding:10px 10px"></td>
+        <td style="padding:10px 10px;text-align:right;font-family:var(--FM);color:var(--c);font-size:.65rem">${totAnim>0?totAnim.toLocaleString():'—'}</td>
+        <td style="padding:10px 10px;text-align:right;font-family:var(--FM);color:var(--dim);font-size:.62rem">${totHA?totHA.toFixed(2)+' ha':'—'}</td>
+        <td style="padding:10px 14px"></td>
+      </tr>
+    </tfoot>
+  </table></div>`;
+  el.innerHTML=html;
+}
+function renderGP(){
+  const s=document.getElementById("selGP");
+  const p=pilas.find(x=>String(x.id)===s.value); if(!p) return;
+  const pesos=[...getCiclo(p).pesosRegistros].sort((a,b)=>a.dia-b.dia);
+  const ctx=document.getElementById("gP").getContext("2d");
+  if(gPInst) gPInst.destroy();
+  if(!pesos.length){ document.getElementById("gInfo").textContent="Sin registros de peso."; return; }
+  gPInst=new Chart(ctx,{type:'line',data:{labels:pesos.map(r=>`D${r.dia}`),datasets:[
+    {label:'Peso real (g)',data:pesos.map(r=>r.peso),borderColor:'#00e676',backgroundColor:'rgba(0,230,118,.1)',fill:true,tension:.3,pointRadius:5,pointBackgroundColor:pesos.map(r=>r.color||'#00e676'),pointBorderColor:'#030b0f',pointBorderWidth:2},
+    {label:'Peso esperado (g)',data:pesos.map(r=>r.pesoEsperado||null),borderColor:'#ff5252',borderDash:[6,4],fill:false,pointRadius:3,pointBackgroundColor:'#ff5252'}
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#b0c8b8',font:{size:10,family:'JetBrains Mono'},boxWidth:14,padding:14}},tooltip:{backgroundColor:'rgba(3,11,15,.92)',borderColor:'rgba(0,230,118,.2)',borderWidth:1,callbacks:{label:ci=>`${ci.dataset.label}: ${ci.raw?.toFixed(2)||'—'} g`}}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a7060',font:{size:9},maxRotation:30}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#4a7060',callback:v=>v+'g'}}}}});
+  document.getElementById("gInfo").innerHTML=`<span style="color:var(--g);font-weight:700">${esc(p.nombre)}</span> · ${pesos.length} muestras · último peso: <span style="font-family:var(--FM);color:var(--w)">${pesos.at(-1)?.peso.toFixed(2)}g</span> (D${pesos.at(-1)?.dia})`;
+}
+function renderGO(){
+  const sP=document.getElementById("selGOP"), sH=document.getElementById("selGOH");
+  const p=pilas.find(x=>String(x.id)===sP.value); if(!p) return;
+  const h=sH.value;
+  const regs=getCiclo(p).aguaRegistros.filter(r=>r.horario===h).sort((a,b)=>a.dia-b.dia);
+  const ctx=document.getElementById("gO").getContext("2d");
+  if(gOInst) gOInst.destroy();
+  if(!regs.length) return;
+  const col=regs.some(r=>r.oxigeno<4)?"#ff5252":"#00b0ff";
+  gOInst=new Chart(ctx,{type:'line',data:{labels:regs.map(r=>`D${r.dia}`),datasets:[
+    {label:`O₂ ${h} (mg/L)`,data:regs.map(r=>r.oxigeno),borderColor:col,backgroundColor:col+'18',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:regs.map(r=>r.oxigeno<4?'#ff5252':col),pointBorderColor:'#030b0f',pointBorderWidth:2}
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#b0c8b8',font:{size:10,family:'JetBrains Mono'},boxWidth:14}},tooltip:{backgroundColor:'rgba(3,11,15,.92)',borderColor:'rgba(0,176,255,.2)',borderWidth:1,callbacks:{label:ci=>`O₂: ${ci.raw} mg/L${ci.raw<4?' ⚠ BAJO':''}`}}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a7060',font:{size:9}}},y:{min:0,suggestedMax:9,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#4a7060',callback:v=>v+' mg/L'},annotations:{line1:{type:'line',yMin:4,yMax:4,borderColor:'rgba(255,82,82,.4)',borderDash:[5,5]}}}}}});
+}
+
+/* ══════════════════════════════════════════
+   EXPORTAR
+══════════════════════════════════════════ */
+function exportCSV(){
+  const rows=[["Pila","Ciclo","FechaSiembra","Responsable","Tipo","Dia","Producto","Valor","Unidad","FechaReg","Hora"]];
+  for(const p of pilas) for(const c of p.ciclos){
+    for(const r of c.alimentoRegistros) for(const i of r.items) rows.push([p.nombre,c.nombre,c.fechaSiembra,c.responsable||'','Alimento',r.dia,i.nombre,i.cantidad,i.unidad||'kg',r.fechaReal,r.hora]);
+    for(const r of c.quimicosRegistros) rows.push([p.nombre,c.nombre,c.fechaSiembra,c.responsable||'','Quimico',r.dia,r.producto,r.cantidad,r.unidad,r.fechaReal,r.hora]);
+    for(const r of c.pesosRegistros) rows.push([p.nombre,c.nombre,c.fechaSiembra,c.responsable||'','Peso',r.dia,'peso',r.peso,'g',r.fechaReal,r.hora]);
+    for(const r of c.aguaRegistros){
+      rows.push([p.nombre,c.nombre,c.fechaSiembra,c.responsable||'','Agua',r.dia,`Ox_${r.horario}`,r.oxigeno,'mg/L',r.fechaReal,r.hora]);
+      rows.push([p.nombre,c.nombre,c.fechaSiembra,c.responsable||'','Agua',r.dia,`Temp_${r.horario}`,r.temperatura,'°C',r.fechaReal,r.hora]);
+    }
+  }
+  const csv="\uFEFF"+rows.map(r=>r.map(c=>`"${c}"`).join(",")).join("\n");
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`nerv_${todayStr()}.csv`; a.click(); toast("📊 CSV exportado");
+}
+function exportBackup(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(pilas,null,2)],{type:'application/json'}));
+  a.download=`nerv_backup_${todayStr()}.json`; a.click(); toast("💾 Backup exportado");
+}
+function importBackup(file){
+  const r=new FileReader();
+  r.onload=async e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(!Array.isArray(d)) throw new Error();
+      pilas=d; await guardar(); toast("✅ Backup restaurado");
+    }catch{ toast("❌ Archivo inválido","er"); }
+  };
+  r.readAsText(file);
+}
+async function exportPDF(){
+  toast("⏳ Generando PDF...","inf");
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210, MARG=15, CONTENT=W-MARG*2;
+  let y=0;
+
+  // ── helpers ──
+  function newPage(){ doc.addPage(); y=20; }
+  function chk(h){ if(y+h>280) newPage(); }
+  function rect(x,yy,w,h,r,fill,stroke){
+    if(fill){ doc.setFillColor(...fill); doc.roundedRect(x,yy,w,h,r,r,'F'); }
+    if(stroke){ doc.setDrawColor(...stroke); doc.roundedRect(x,yy,w,h,r,r,'S'); }
+  }
+  function label(txt,x,yy,size,rgb,align='left'){
+    doc.setFontSize(size); doc.setTextColor(...rgb);
+    doc.text(txt,x,yy,{align});
+  }
+  function hline(yy,rgb=[30,60,40]){ doc.setDrawColor(...rgb); doc.setLineWidth(.3); doc.line(MARG,yy,W-MARG,yy); }
+  function badge(txt,x,yy,bg,fg){
+    const w=doc.getStringUnitWidth(txt)*5+6;
+    rect(x,yy-3.5,w,5.5,2,bg);
+    doc.setFontSize(7); doc.setTextColor(...fg); doc.text(txt,x+3,yy);
+    return w+3;
+  }
+
+  // ══ PORTADA ══
+  rect(0,0,W,297,0,[4,13,16]);
+  rect(0,0,W,60,0,[0,30,20]);
+  // decorative lines
+  doc.setDrawColor(0,100,60); doc.setLineWidth(.5);
+  for(let i=0;i<6;i++){ doc.line(0,i*10,W,i*10-.5); }
+  label("NERV",W/2,22,28,[0,255,140],'center');
+  label("PRE CRÍAS · INFORME DE PRODUCCIÓN",W/2,31,9,[180,255,220],'center');
+  label(`Generado: ${new Date().toLocaleString('es-ES')}`,W/2,38,7,[100,160,130],'center');
+
+  const activas=pilas.filter(p=>p.estado!=="cosechada");
+  const cosechadas=pilas.filter(p=>p.estado==="cosechada");
+  // stat boxes
+  const stats=[
+    {l:"PILAS ACTIVAS",v:String(activas.length),c:[0,255,140]},
+    {l:"COSECHADAS",v:String(cosechadas.length),c:[192,132,252]},
+    {l:"TOTAL CICLOS",v:String(pilas.reduce((a,p)=>a+p.ciclos.length,0)),c:[0,212,255]},
+    {l:"TOTAL REGISTROS",v:String(pilas.reduce((a,p)=>a+p.ciclos.reduce((b,c)=>b+c.pesosRegistros.length+c.aguaRegistros.length+c.alimentoRegistros.length+c.quimicosRegistros.length,0),0)),c:[255,214,10]}
+  ];
+  stats.forEach((s,i)=>{
+    const bx=MARG+(i*(CONTENT/4)),by=46;
+    rect(bx,by,CONTENT/4-2,14,2,[0,22,14]);
+    doc.setDrawColor(...s.c); doc.setLineWidth(.4); doc.roundedRect(bx,by,CONTENT/4-2,14,2,2,'S');
+    label(s.v,bx+(CONTENT/4-2)/2,by+7,11,s.c,'center');
+    label(s.l,bx+(CONTENT/4-2)/2,by+12,5,[120,180,150],'center');
+  });
+
+  y=75;
+  label("PILAS ACTIVAS",MARG,y,8,[0,255,140]); hline(y+2,[0,80,50]); y+=7;
+
+  // ══ PILAS ══
+  for(const p of pilas){
+    const ciclo=getCiclo(p);
+    const esCos=p.estado==="cosechada";
+    const dia=esCos?(p.diaCosecha||0):diaDe(ciclo.fechaSiembra);
+    const pesos=[...ciclo.pesosRegistros].sort((a,b)=>a.dia-b.dia);
+    const ultP=pesos.at(-1);
+
+    chk(20);
+    if(y>20 && y<75) y=75;
+    // pila header
+    const hc = esCos ? [40,20,60] : [0,30,20];
+    rect(MARG,y,CONTENT,9,2,hc);
+    const nc = esCos ? [192,132,252] : [0,255,140];
+    label(`${esCos?'🦐 ':'🌱 '}ESTANQUE ${p.nombre} — ${ciclo.nombre}`,MARG+3,y+6,9,nc);
+    label(`DÍA ${dia}`,W-MARG-3,y+6,8,nc,'right');
+    y+=12;
+
+    // info row
+    const ha=PILA_HA[p.nombre]||0;
+    const animales=ciclo.densidad&&ha?(parseFloat(ciclo.densidad)*ha*10000):0;
+    const sv=calcSobrevivencia(ciclo, dia);
+    const fcaData=calcFCA(ciclo);
+    label(`Siembra: ${fmt(ciclo.fechaSiembra)}  ${ciclo.responsable?'Resp: '+ciclo.responsable+'  ':''}${ha?'Ha: '+ha+'  ':''}${ciclo.densidad?'Dens: '+ciclo.densidad+' larv/m²  ':''}${animales?'Siembra: '+animales.toLocaleString()+' larvas  ':''}${sv?'Sobrev: '+sv.pct+'%  ':''}${fcaData&&fcaData.fca!==null?'FCA: '+fcaData.fca:''}`,MARG+2,y,7,[120,160,140]);
+    if(esCos) label(`Cosechada: ${fmt(p.fechaCosecha||'')}`,W-MARG-3,y,7,[192,132,252],'right');
+    y+=5; hline(y,[0,50,30]); y+=4;
+
+    // muestreo progress table
+    if(pesos.length){
+      label("MUESTREOS DE PESO",MARG+2,y,7,[0,200,120]); y+=4;
+      const colW=CONTENT/8;
+      // header
+      DIAS_MUESTREO.forEach((d,i)=>{
+        rect(MARG+i*colW,y,colW-1,5,1,[0,20,12]);
+        label(`DÍA ${d}`,MARG+i*colW+colW/2,y+3.5,5.5,[100,160,130],'center');
+      });
+      y+=6;
+      // values
+      const diasConPeso=new Map(pesos.map(r=>[r.dia,r]));
+      DIAS_MUESTREO.forEach((d,i)=>{
+        const reg=diasConPeso.get(d);
+        const bg=reg?(reg.color==='#00ff8c'||reg.estado==='ok'?[0,25,15]:(reg.estado==='bajo'?[25,20,0]:[25,8,8])):[8,12,10];
+        const tc=reg?(reg.color==='#00ff8c'||reg.estado==='ok'?[0,220,110]:(reg.estado==='bajo'?[255,214,10]:[255,60,80])):[60,100,80];
+        rect(MARG+i*colW,y,colW-1,6,1,bg);
+        label(reg?reg.peso.toFixed(2)+'g':'—',MARG+i*colW+colW/2,y+4.5,6,tc,'center');
+      });
+      y+=8;
+      // expected vs actual summary
+      const mH=pesos.filter(r=>DIAS_MUESTREO.includes(r.dia));
+      if(mH.length){
+        label(`${mH.length}/${DIAS_MUESTREO.length} muestreos completados  |  Último: ${ultP?.peso.toFixed(2)}g (D${ultP?.dia})`,MARG+2,y,7,[100,160,130]);
+        y+=5;
+      }
+    } else {
+      label("Sin registros de peso",MARG+2,y,7,[80,120,100]); y+=5;
+    }
+
+    // water data summary
+    const oxRegs=ciclo.aguaRegistros.sort((a,b)=>a.dia-b.dia);
+    if(oxRegs.length){
+      y+=2; label("PARÁMETROS DE AGUA (últimos 5 registros)",MARG+2,y,7,[0,180,200]); y+=4;
+      const ultRegs=oxRegs.slice(-5);
+      ultRegs.forEach(r=>{
+        chk(5);
+        const col=r.oxigeno<4?[255,60,80]:[0,180,150];
+        label(`D${r.dia} (${r.fechaReal}) ${r.horario} · O₂: ${r.oxigeno} mg/L · Temp: ${r.temperatura}°C`,MARG+4,y,6.5,col);
+        if(r.oxigeno<4){ badge("⚠ BAJO",MARG+100,y-3.5,[80,10,10],[255,100,100]); }
+        y+=4;
+      });
+    }
+
+    // alimentos summary
+    if(ciclo.alimentoRegistros.length){
+      y+=2;
+      const fcaD=calcFCA(ciclo);
+      const fcaStr=fcaD&&fcaD.fca!==null?`  ·  FCA: ${fcaD.fca}  ·  Biomasa: ${fcaD.biomasaKg}kg`:`  ·  FCA: sin datos de peso`;
+      label(`ALIMENTO: ${ciclo.alimentoRegistros.length} registros  ·  Total: ${fcaD?fcaD.alimTotal:0}kg${fcaStr}`,MARG+2,y,7,[100,180,120]); y+=4;
+      ciclo.alimentoRegistros.slice(-3).forEach(r=>{
+        chk(4); label(`D${r.dia}: ${r.items.map(i=>`${i.nombre} ${i.cantidad}${i.unidad||'kg'}`).join(', ')}`,MARG+4,y,6,[80,140,100]); y+=4;
+      });
+    }
+
+    y+=4; hline(y,[0,50,30]); y+=6;
+    chk(0);
+    if(y>255){ newPage(); }
+  }
+
+  // ══ RESUMEN GLOBAL ══
+  if(y>230) newPage();
+  y+=5; hline(y,[0,100,50]); y+=6;
+  label("RESUMEN GLOBAL DE MUESTREOS DE PESO",MARG,y,9,[0,255,140]); y+=7;
+
+  // tabla global
+  const headers=["Estanque","Siembra","Ha","Dens.","D3","D6","D9","D12","D15","D18","D21","Sobrev%","FCA","Estado"];
+  const cws=[17,15,10,14,11,11,11,11,11,11,11,13,10,15];
+  let cx=MARG;
+  headers.forEach((h,i)=>{ rect(cx,y,cws[i],6,0,[0,20,12]); label(h,cx+1,y+4.5,5.5,[0,200,120]); cx+=cws[i]; });
+  y+=7;
+
+  for(const p of pilas){
+    chk(7);
+    const ciclo=getCiclo(p);
+    const diasConPeso=new Map(ciclo.pesosRegistros.map(r=>[r.dia,r]));
+    const esCos=p.estado==="cosechada";
+    const ha=PILA_HA[p.nombre]||0;
+    const dia2=esCos?(p.diaCosecha||0):diaDe(ciclo.fechaSiembra);
+    const sv=calcSobrevivencia(ciclo, dia2);
+    const fcaD=calcFCA(ciclo);
+    cx=MARG;
+    const rowBg=esCos?[20,10,30]:[0,15,8];
+    rect(MARG,y,CONTENT,6,0,rowBg);
+    const cols=[p.nombre, fmt(ciclo.fechaSiembra).slice(5), ha?ha.toFixed(1):'—', ciclo.densidad?Number(ciclo.densidad).toLocaleString():'—',
+      ...DIAS_MUESTREO.map(d=>diasConPeso.get(d)?diasConPeso.get(d).peso.toFixed(1):'—'),
+      sv?sv.pct+'%':'—', fcaD&&fcaD.fca!==null?String(fcaD.fca):'—',
+      esCos?'COSECHADA':'ACTIVA'];
+    cols.forEach((v,i)=>{
+      const tc=i===cols.length-1?(esCos?[192,132,252]:[0,255,140]):[160,200,180];
+      label(String(v),cx+1,y+4.5,5.5,tc); cx+=cws[i];
+    });
+    y+=7;
+  }
+
+  // footer
+  const pages=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pages;i++){
+    doc.setPage(i);
+    rect(0,288,W,9,0,[0,15,8]);
+    label(`NERV · Pre Crías · ${new Date().toLocaleDateString('es-ES')}`,W/2,293,6,[0,150,80],'center');
+    label(`Página ${i}/${pages}`,W-MARG,293,6,[60,100,80],'right');
+  }
+
+  doc.save(`nerv_informe_${todayStr()}.pdf`);
+  toast("📄 PDF generado ✅");
+}
+
+/* ══════════════════════════════════════════
+   HISTORIAL MODAL
+══════════════════════════════════════════ */
+function abrirHistorial(pilaId){
+  modPilaId=pilaId;
+  const p=pilas.find(x=>x.id===pilaId); if(!p) return;
+  document.getElementById("mTit").textContent=`HISTORIAL · ESTANQUE ${p.nombre}`;
+  document.getElementById("modH").classList.add("op");
+  renderModTab(modTab);
+}
+function renderModTab(tab){
+  modTab=tab;
+  document.querySelectorAll(".mtabs .stab").forEach(t=>t.classList.toggle("ac",t.dataset.mt===tab));
+  const p=pilas.find(x=>x.id===modPilaId); if(!p) return;
+  const mBody=document.getElementById("mBody");
+  let html=`<div style="margin-bottom:11px"><span class="lbl">Ciclo</span>
+    <select id="mCS">${p.ciclos.map((c,i)=>`<option value="${i}">${c.nombre} (${fmt(c.fechaSiembra)})${c.responsable?` · ${c.responsable}`:''}</option>`).join('')}</select></div>`;
+  const cicloIdx=parseInt(document.getElementById("mCS")?.value||0)||0;
+  const ciclo=p.ciclos[cicloIdx]||p.ciclos.at(-1);
+  const ci=p.ciclos.indexOf(ciclo);
+  function ents(lista,fmtFn){
+    if(!lista.length) return '<div class="empty" style="padding:10px">Sin registros en este ciclo.</div>';
+    return [...lista].reverse().map(r=>{
+      const ri=lista.indexOf(r);
+      return `<div class="hi">
+        <span class="hid">D${r.dia}</span>
+        <div class="hdt">${fmtFn(r)}<div class="hmt">${r.fechaReal||''} ${r.hora||''}</div></div>
+        <button class="btn dn xs delR" data-ci="${ci}" data-ri="${ri}">✕</button>
+      </div>`;
+    }).join('');
+  }
+  const tipoMap={alimento:'alimentoRegistros',quimicos:'quimicosRegistros',agua:'aguaRegistros',pesos:'pesosRegistros'};
+  if(tab==="alimento")
+    html+=ents(ciclo.alimentoRegistros,r=>r.items.map(i=>{const s=PESO_SACO[i.nombre]?` <span class="tag" style="font-size:.5rem">${(i.cantidad/PESO_SACO[i.nombre]).toFixed(2)} sacos</span>`:'';return `<strong>${esc(i.nombre)}</strong>: ${i.cantidad} ${i.unidad||'kg'}${s}`;}).join('<br>'));
+  else if(tab==="quimicos")
+    html+=ents(ciclo.quimicosRegistros,r=>`<strong>${esc(r.producto)}</strong>: ${r.cantidad} ${r.unidad}`);
+  else if(tab==="agua")
+    html+=ents(ciclo.aguaRegistros,r=>`${r.horario} · 🌡 ${r.temperatura}°C · 💨 ${r.oxigeno} mg/L${r.oxigeno<4?' <span class="tag r">⚠ BAJO</span>':''}`);
+  else if(tab==="pesos"){
+    // Muestreo timeline visual in modal
+    const diasConPesoMap=new Map(ciclo.pesosRegistros.map(r=>[r.dia,r]));
+    const muestreoHTML=`<div style="background:rgba(0,255,140,.04);border:1px solid rgba(0,255,140,.1);border-radius:var(--rsm);padding:10px 12px;margin-bottom:12px">
+      <div style="font-size:.55rem;letter-spacing:.15em;color:var(--dim);text-transform:uppercase;margin-bottom:8px">⚖ MUESTREOS D3·D6·D9·D12·D15·D18·D21</div>
+      <div style="display:flex;gap:4px">${DIAS_MUESTREO.map(d=>{
+        const r=diasConPesoMap.get(d);
+        const c=r?(r.color||'#00ff8c'):'rgba(58,102,80,.4)';
+        return `<div style="flex:1;text-align:center;padding:5px 2px;background:${r?c+'15':'transparent'};border:1px solid ${c};border-radius:var(--rsm)">
+          <div style="font-family:var(--FM);font-size:.65rem;color:${c}">${r?r.peso.toFixed(1):'—'}</div>
+          <div style="font-size:.48rem;color:var(--dim)">D${d}</div>
+        </div>`;
+      }).join('')}</div>
+    </div>`;
+    html+=muestreoHTML+ents(ciclo.pesosRegistros,r=>`<strong>${r.peso.toFixed(2)} g</strong>${r.pesoEsperado?` · esp: ${r.pesoEsperado.toFixed(2)} g`:''} <span class="tag" style="border-color:${r.color};color:${r.color}">${r.estado}</span>`);
+  }
+  else if(tab==="ciclos"){
+    // Show cosecha status per ciclo
+    const cosInfo = p.estado==="cosechada" ? `<div style="background:rgba(192,132,252,.08);border:1px solid rgba(192,132,252,.25);border-radius:var(--rsm);padding:10px 12px;margin-bottom:11px">
+      <div style="font-family:var(--FM);font-size:.6rem;color:#c084fc;margin-bottom:6px">🦐 PILA COSECHADA</div>
+      <div style="font-size:.7rem">Fecha: <b style="color:#c084fc">${fmt(p.fechaCosecha||'')}</b> · Día: <b style="color:#c084fc">${p.diaCosecha||'—'}</b></div>
+    </div>` : '';
+    html+=cosInfo+p.ciclos.map((c,i)=>`<div class="hi"><span class="hid">#${i+1}</span>
+      <div class="hdt"><strong>${esc(c.nombre)}</strong> · ${fmt(c.fechaSiembra)}
+      ${c.responsable?`<div class="hmt">Resp: ${esc(c.responsable)}</div>`:''}
+      ${c.densidad?`<div class="hmt">Densidad: ${c.densidad} larv/m²</div>`:''}
+      ${c.larvasSembradas?`<div class="hmt">Larvas sembradas: ${Number(c.larvasSembradas).toLocaleString()}</div>`:''}
+      ${c.mortalidadDiaria!=null?`<div class="hmt">Mortalidad diaria: ${c.mortalidadDiaria}%/día</div>`:''}
+      ${(c.eventosMortalidad||[]).length?`<div class="hmt" style="color:var(--r)">${(c.eventosMortalidad||[]).length} eventos de mortalidad registrados: ${(c.eventosMortalidad||[]).map(ev=>`D${ev.dia} ${ev.tipo} −${ev.reduccion}%`).join(' · ')}</div>`:''}
+      ${(()=>{const d=p.ciclos.indexOf(c)===p.ciclos.length-1?diaDe(c.fechaSiembra):0;const sv=calcSobrevivencia(c,d);return sv&&d>0?`<div class="hmt" style="color:${sv.pct<70?'var(--r)':'var(--g)'}">Sobrevivencia actual: ${sv.pct}% (${sv.animalesVivos.toLocaleString()} animales)</div>`:''})()}
+      ${(()=>{const fc=calcFCA(c);return fc&&fc.fca!==null?`<div class="hmt" style="color:var(--y)">FCA: ${fc.fca} · Alimento total: ${fc.alimTotal}kg · Biomasa: ${fc.biomasaKg}kg</div>`:fc?`<div class="hmt">Alimento total: ${fc.alimTotal}kg (sin datos de peso para FCA)</div>`:''})()}
+      <div class="hmt">A:${c.alimentoRegistros.length} Q:${c.quimicosRegistros.length} P:${c.pesosRegistros.length} W:${c.aguaRegistros.length}</div>
+      </div></div>`).join('');
+  }
+  else if(tab==="completo"){
+    // Full chronological history across ALL ciclos
+    let allEvts=[];
+    p.ciclos.forEach((c,ci)=>{
+      c.pesosRegistros.forEach(r=>allEvts.push({dia:r.dia,fecha:r.fechaReal,hora:r.hora||'',tipo:'⚖ Peso',desc:`${r.peso.toFixed(2)}g${r.pesoEsperado?` / esp:${r.pesoEsperado.toFixed(2)}g`:''}`,estado:r.estado,color:r.color||'#00ff8c',cicloNom:c.nombre}));
+      c.aguaRegistros.forEach(r=>allEvts.push({dia:r.dia,fecha:r.fechaReal,hora:r.hora||'',tipo:'💧 Agua',desc:`${r.horario} · O₂:${r.oxigeno} mg/L · ${r.temperatura}°C`,estado:r.oxigeno<4?'bajo':'ok',color:r.oxigeno<4?'#ff2d55':'#00d4ff',cicloNom:c.nombre}));
+      c.alimentoRegistros.forEach(r=>allEvts.push({dia:r.dia,fecha:r.fechaReal,hora:r.hora||'',tipo:'🍽 Alimento',desc:r.items.map(i=>`${i.nombre} ${i.cantidad}${i.unidad||'kg'}`).join(', '),estado:'',color:'#00ff8c',cicloNom:c.nombre}));
+      c.quimicosRegistros.forEach(r=>allEvts.push({dia:r.dia,fecha:r.fechaReal,hora:r.hora||'',tipo:'🧪 Químico',desc:`${r.producto} ${r.cantidad}${r.unidad}`,estado:'',color:'#ffd60a',cicloNom:c.nombre}));
+    });
+    if(p.estado==="cosechada") allEvts.push({dia:p.diaCosecha||0,fecha:p.fechaCosecha||'',hora:'',tipo:'🦐 COSECHA',desc:'Pila cosechada — ciclo cerrado',estado:'cosechada',color:'#c084fc',cicloNom:''});
+    allEvts.sort((a,b)=>b.dia-a.dia||(b.fecha>a.fecha?1:-1));
+    if(!allEvts.length){ html+='<div class="empty" style="padding:10px">Sin registros en esta pila.</div>'; }
+    else html+=allEvts.map(e=>`<div class="hi">
+      <span class="hid" style="color:${e.color}">${e.tipo}</span>
+      <div class="hdt"><strong style="color:${e.color}">D${e.dia}</strong> — ${e.desc}
+        ${e.cicloNom?`<div class="hmt">Ciclo: ${esc(e.cicloNom)}</div>`:''}
+        <div class="hmt">${e.fecha} ${e.hora}</div>
+      </div>
+    </div>`).join('');
+  }
+  mBody.innerHTML=html;
+  const cs=document.getElementById("mCS"); if(cs){ cs.value=cicloIdx; cs.onchange=()=>renderModTab(tab); }
+  if(tipoMap[tab]){
+    const lista=ciclo[tipoMap[tab]];
+    const revLista=[...lista].reverse();
+    mBody.querySelectorAll(".delR").forEach((btn,li)=>{
+      const ri=lista.indexOf(revLista[li]);
+      btn.onclick=()=>eliminarReg(tipoMap[tab],modPilaId,parseInt(btn.dataset.ci),ri);
+    });
+  }
+}
+
+/* ══════════════════════════════════════════
+   RENDER PRINCIPAL
+══════════════════════════════════════════ */
+function actualizar(){
+  ordenar(); actualizarDash(); renderCal(); poblarSels(); renderizar();
+}
+function renderizar(){
+  const cont=document.getElementById("listaPilas");
+  const fil=pilas.filter(p=>p.nombre.toLowerCase().includes(filtro.toLowerCase()));
+  if(!fil.length){ cont.innerHTML='<div class="empty">Sin estanques. Toca ＋ para crear uno.</div>'; return; }
+  const activas=fil.filter(p=>p.estado!=="cosechada");
+  const cosechadas=fil.filter(p=>p.estado==="cosechada");
+  let html=activas.map(p=>buildPilaHTML(p)).join('');
+  if(!filtroCos && cosechadas.length){
+    html+=`<div style="margin:18px 0 8px;display:flex;align-items:center;gap:8px">
+      <span style="font-family:var(--FM);font-size:.58rem;letter-spacing:.2em;color:#c084fc">🦐 ESTANQUES COSECHADOS (${cosechadas.length})</span>
+      <span style="flex:1;height:1px;background:rgba(192,132,252,.2)"></span>
+    </div>`;
+    html+=cosechadas.map(p=>buildPilaHTML(p)).join('');
+  }
+  cont.innerHTML=html;
+  for(const p of fil) bindPila(p);
+}
+
+/* ──────────────────────────────────────────
+   BUILD HTML DE PILA
+────────────────────────────────────────── */
+function buildMuestreoTimeline(pilaId, pesos){
+  const diasConPeso=new Map(pesos.map(r=>[r.dia, r]));
+  const items=DIAS_MUESTREO.map(d=>{
+    const reg=diasConPeso.get(d);
+    const hecho=!!reg;
+    const color=hecho?(reg.color||'#00ff8c'):'rgba(58,102,80,.4)';
+    const label=hecho?`${reg.peso.toFixed(2)}g`:'—';
+    const esp=PESO_OBJ[d]||null;
+    const devStr=hecho&&esp?` (${reg.peso>=esp?'+':''}${(reg.peso-esp).toFixed(2)})` : '';
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0">
+      <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${color};background:${hecho?color+'22':'transparent'};display:flex;align-items:center;justify-content:center;font-size:.58rem;color:${color};font-family:var(--FM)">${hecho?'✓':d}</div>
+      <div style="font-size:.5rem;color:${color};font-family:var(--FM);font-weight:600">${label}</div>
+      <div style="font-size:.45rem;color:var(--dim)">D${d}${devStr}</div>
+    </div>`;
+  }).join(`<div style="flex:1;height:1px;background:rgba(0,255,140,.1);margin-top:14px"></div>`);
+  return `<div style="background:rgba(0,255,140,.03);border:1px solid rgba(0,255,140,.1);border-radius:var(--rsm);padding:10px 12px;margin-bottom:11px">
+    <div style="font-size:.55rem;letter-spacing:.15em;color:var(--dim);text-transform:uppercase;margin-bottom:9px">⚖ PROGRESO DE MUESTREOS (días 3·6·9·12·15·18·21)</div>
+    <div style="display:flex;align-items:center;gap:0">${items}</div>
+  </div>`;
+}
+
+function buildResumenCosecha(p, ciclo){
+  const pesos=[...ciclo.pesosRegistros].sort((a,b)=>a.dia-b.dia);
+  const ultP=pesos.at(-1);
+  const sv=calcSobrevivencia(ciclo, p.diaCosecha||0);
+  const fc=calcFCA(ciclo);
+  return `<div style="background:rgba(192,132,252,.06);border:1px solid rgba(192,132,252,.25);border-radius:var(--rsm);padding:12px;margin-bottom:11px">
+    <div style="font-family:var(--FM);font-size:.6rem;color:#c084fc;letter-spacing:.15em;margin-bottom:10px">🦐 RESUMEN DE COSECHA</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+      <div style="background:rgba(192,132,252,.06);border-radius:var(--rsm);padding:8px 10px">
+        <div style="font-size:.55rem;color:var(--dim)">Fecha cosecha</div>
+        <div style="font-size:.8rem;color:#c084fc;font-family:var(--FM)">${fmt(p.fechaCosecha||'')}</div>
+      </div>
+      <div style="background:rgba(192,132,252,.06);border-radius:var(--rsm);padding:8px 10px">
+        <div style="font-size:.55rem;color:var(--dim)">Día de cosecha</div>
+        <div style="font-size:.8rem;color:#c084fc;font-family:var(--FM)">${p.diaCosecha||'—'}</div>
+      </div>
+      <div style="background:rgba(192,132,252,.06);border-radius:var(--rsm);padding:8px 10px">
+        <div style="font-size:.55rem;color:var(--dim)">Peso final</div>
+        <div style="font-size:.8rem;color:var(--g);font-family:var(--FM)">${ultP?ultP.peso.toFixed(2)+'g':'—'}</div>
+      </div>
+      <div style="background:rgba(192,132,252,.06);border-radius:var(--rsm);padding:8px 10px">
+        <div style="font-size:.55rem;color:var(--dim)">Muestreos</div>
+        <div style="font-size:.8rem;color:var(--c);font-family:var(--FM)">${pesos.length} registros</div>
+      </div>
+      ${sv?`<div style="background:rgba(0,230,118,.06);border-radius:var(--rsm);padding:8px 10px">
+        <div style="font-size:.55rem;color:var(--dim)">Sobrevivencia final</div>
+        <div style="font-size:.8rem;color:${sv.pct<70?'var(--r)':'var(--g)'};font-family:var(--FM)">${sv.pct}%</div>
+      </div>`:''}
+      ${fc&&fc.fca!==null?`<div style="background:rgba(255,196,0,.06);border-radius:var(--rsm);padding:8px 10px">
+        <div style="font-size:.55rem;color:var(--dim)">FCA final</div>
+        <div style="font-size:.8rem;color:var(--y);font-family:var(--FM)">${fc.fca}</div>
+      </div>`:''}
+    </div>
+  </div>`;
+}
+
+function buildPilaHTML(p){
+  const ciclo=getCiclo(p);
+  const esCosechada = p.estado==="cosechada";
+  const dia = esCosechada ? (p.diaCosecha||diaDe(ciclo.fechaSiembra)) : diaDe(ciclo.fechaSiembra);
+  const evHoy=EVENTOS[dia]||[];
+  const prox=Object.entries(EVENTOS).filter(([d])=>parseInt(d)>=dia&&parseInt(d)<=dia+7).map(([d,ev])=>({dia:parseInt(d),ev}));
+  const prog=Math.min(100,Math.floor((dia/21)*100));
+  const pesos=[...ciclo.pesosRegistros].sort((a,b)=>a.dia-b.dia);
+  const ultP=pesos.at(-1);
+  const desv=ultP?.pesoEsperado?+(ultP.peso-ultP.pesoEsperado).toFixed(2):null;
+  const alO2=!esCosechada && ciclo.aguaRegistros.slice(-4).some(r=>r.oxigeno<4);
+  const ab=expandidas.has(p.id);
+  const hoy=todayStr();
+
+  // Muestreo progress: cuántos de los 7 días ya se registraron
+  const diasConPeso=new Set(pesos.map(r=>r.dia));
+  const muestreosHechos=DIAS_MUESTREO.filter(d=>diasConPeso.has(d)).length;
+  const proxMuestreo=DIAS_MUESTREO.find(d=>d>dia);
+  const muestreoHoy=DIAS_MUESTREO.includes(dia) && !diasConPeso.has(dia);
+
+  function fechaRow(idSuf){
+    return `<div class="date-row">
+      <label>📅 Fecha del registro:</label>
+      <input type="date" id="fec_${idSuf}_${p.id}" value="${hoy}" max="${hoy}" style="flex:1">
+    </div>`;
+  }
+
+  const evHTML=prox.length?prox.map(e=>{
+    const es=e.dia===dia,em=e.dia===dia+1;
+    return `<div class="evi ${es?'hoy':em?'man':''}">
+      <span class="eday ${es?'hoy':em?'man':''}">${e.dia}</span>
+      <div><div class="etag">${es?'HOY':em?'MAÑANA':`en ${e.dia-dia}d`}</div>
+      <div style="font-size:.72rem">${e.ev.join(' · ')}</div></div>
+    </div>`;
+  }).join(''):'<div class="empty" style="padding:12px">Sin eventos en los próximos 7 días.</div>';
+
+  const muestreoAlert = !esCosechada && DIAS_MUESTREO.includes(dia) && !new Set(pesos.map(r=>r.dia)).has(dia)
+    ? `<div style="background:rgba(255,214,10,.07);border:1px solid rgba(255,214,10,.3);border-radius:var(--rsm);padding:8px 11px;margin-bottom:9px;font-size:.68rem;color:var(--y)">⚖ HOY ES DÍA ${dia} — Muestreo de peso programado. Peso esperado: <b>${PESO_OBJ[dia]||'—'}g</b></div>` : '';
+
+  const pesoHTML= esCosechada ? `<div style="padding:12px;color:var(--dim);font-size:.7rem;text-align:center">Pila cosechada — registros de solo lectura<br><button class="btn xs inf btnHist" data-id="${p.id}" style="margin-top:8px">📋 Ver historial completo</button></div>` : `
+    ${muestreoAlert}
+    ${fechaRow('p')}
+    <div class="pgrid">
+      <input type="number" id="pIn_${p.id}" placeholder="Peso real (g)" step="0.01" style="flex:2">
+      <input type="number" id="pEsp_${p.id}" placeholder="Esp. (${PESO_OBJ[dia]||'—'}g)" step="0.01" style="flex:1.5">
+      <button class="btn sm inf btnPeso" data-id="${p.id}" style="flex:.7">➕</button>
+    </div>
+    <div class="plist">
+      ${pesos.length?pesos.slice().reverse().map(r=>
+        `<div class="pitem"><span>D<strong>${r.dia}</strong> (${r.fechaReal}) · ${r.peso.toFixed(2)}g${r.pesoEsperado?` / ${r.pesoEsperado.toFixed(2)}g`:''}</span><span class="pdot" style="background:${r.color||'#60a5fa'};box-shadow:0 0 5px ${r.color||'#60a5fa'}"></span></div>`
+      ).join(''):'<div class="empty" style="padding:10px">Sin registros de peso.</div>'}
+    </div>
+    ${pesos.length?`<div class="chbox"><canvas id="gpes_${p.id}" style="max-height:140px"></canvas></div>`:''}`;
+
+  const fcaInfo = (()=>{
+    const fc = calcFCA(ciclo);
+    const sv = calcSobrevivencia(ciclo, dia);
+    if(!fc && !sv) return '';
+    let html = `<div style="background:rgba(255,196,0,.05);border:1px solid rgba(255,196,0,.18);border-radius:var(--rsm);padding:11px 13px;margin-bottom:11px">
+      <div style="font-size:.55rem;letter-spacing:.15em;color:var(--y);text-transform:uppercase;margin-bottom:8px">📊 INDICADORES PRODUCTIVOS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">`;
+    if(sv){
+      html += `<div style="background:rgba(0,230,118,.06);border-radius:var(--rsm);padding:8px 10px">
+        <div style="font-size:.52rem;color:var(--dim)">Sobrevivencia estimada</div>
+        <div style="font-size:.9rem;font-family:var(--FM);color:${sv.pct<70?'var(--r)':sv.pct<85?'var(--y)':'var(--g)'};font-weight:700">${sv.pct}%</div>
+        <div style="font-size:.55rem;color:var(--dim)">${sv.animalesVivos.toLocaleString()} animales vivos · ${sv.mortPct}%/día</div>
+      </div>`;
+    }
+    if(fc){
+      html += `<div style="background:rgba(255,196,0,.06);border-radius:var(--rsm);padding:8px 10px">
+        <div style="font-size:.52rem;color:var(--dim)">Factor de Conv. Alim.</div>
+        <div style="font-size:.9rem;font-family:var(--FM);color:var(--y);font-weight:700">${fc.fca !== null ? fc.fca : '—'}</div>
+        <div style="font-size:.55rem;color:var(--dim)">${fc.alimTotal}kg alim · ${fc.biomasaKg !== null ? fc.biomasaKg+'kg biomasa' : 'sin peso'}</div>
+      </div>`;
+    }
+    html += `</div></div>`;
+    return html;
+  })();
+
+
+  /* ── Eventos de mortalidad ── */
+  const evMort = [...(ciclo.eventosMortalidad||[])].sort((a,b)=>a.dia-b.dia);
+  const svActual = calcSobrevivencia(ciclo, dia);
+  const mortHTML = `
+    <div style="background:rgba(255,82,82,.05);border:1px solid rgba(255,82,82,.15);border-radius:var(--rsm);padding:12px;margin-bottom:11px">
+      <div style="font-size:.52rem;letter-spacing:.12em;color:var(--r);text-transform:uppercase;margin-bottom:8px">📊 SOBREVIVENCIA ACTUAL</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px">
+        <div style="background:rgba(255,82,82,.07);border-radius:var(--rsm);padding:9px 11px">
+          <div style="font-size:.5rem;color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Animales vivos est.</div>
+          <div style="font-size:1rem;font-family:var(--FM);font-weight:700;color:${svActual&&svActual.pct<70?'var(--r)':svActual&&svActual.pct<85?'var(--y)':'var(--g)'}">
+            ${svActual?svActual.animalesVivos.toLocaleString():'—'}</div>
+        </div>
+        <div style="background:rgba(255,82,82,.07);border-radius:var(--rsm);padding:9px 11px">
+          <div style="font-size:.5rem;color:var(--dim);text-transform:uppercase;letter-spacing:.08em">% Sobrevivencia</div>
+          <div style="font-size:1rem;font-family:var(--FM);font-weight:700;color:${svActual&&svActual.pct<70?'var(--r)':svActual&&svActual.pct<85?'var(--y)':'var(--g)'}">
+            ${svActual?svActual.pct+'%':'—'}</div>
+        </div>
+      </div>
+      <div style="font-size:.58rem;color:var(--dim)">Sembradas: ${ciclo.larvasSembradas?Number(ciclo.larvasSembradas).toLocaleString():'—'} · Mort. diaria: ${ciclo.mortalidadDiaria||0.5}%/día · ${evMort.length} evento${evMort.length!==1?'s':''} registrado${evMort.length!==1?'s':''}</div>
+    </div>
+
+    <div style="font-size:.58rem;font-weight:700;color:var(--w);letter-spacing:.08em;margin-bottom:8px">BAJAR SOBREVIVENCIA</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div>
+        <span class="lbl">Tipo de evento</span>
+        <select id="meTipo_${p.id}" style="background:var(--s1);border:1px solid var(--bo);color:var(--w);padding:10px 12px;border-radius:var(--rsm);font-size:.72rem;width:100%">
+          <option value="raleo">🎣 Raleo (cosecha parcial)</option>
+          <option value="mortalidad">💀 Mortalidad</option>
+          <option value="oxigeno">💨 Bajón de oxígeno</option>
+          <option value="depredador">🦅 Depredador</option>
+          <option value="otro">⚠ Otro</option>
+        </select>
+      </div>
+      <div>
+        <span class="lbl">Reducción estimada (%)</span>
+        <input type="number" id="meRed_${p.id}" placeholder="ej: 15" min="0.1" max="99" step="0.1" style="font-family:var(--FM)">
+        <div id="meCalc_${p.id}" style="font-size:.58rem;color:var(--dim);margin-top:2px;min-height:14px"></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div>
+        <span class="lbl">Día del evento</span>
+        <input type="number" id="meDia_${p.id}" placeholder="Día del ciclo" min="1" value="${dia}" style="font-family:var(--FM)">
+      </div>
+      <div>
+        <span class="lbl">Notas (opcional)</span>
+        <input type="text" id="meNota_${p.id}" placeholder="Observaciones...">
+      </div>
+    </div>
+    <button class="btn sm pr btnSaveMort full" data-id="${p.id}" style="margin-bottom:14px">📉 Aplicar ajuste</button>
+
+    ${evMort.length?`
+    <div style="font-size:.55rem;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">Historial de eventos</div>
+    ${evMort.map(ev=>{
+      const iconos={raleo:'🎣',mortalidad:'💀',oxigeno:'💨',depredador:'🦅',otro:'⚠'};
+      const cols={raleo:'var(--c)',mortalidad:'var(--r)',oxigeno:'var(--y)',depredador:'#ce93d8',otro:'var(--dim)'};
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:rgba(255,82,82,.04);border:1px solid rgba(255,82,82,.1);border-radius:var(--rsm);margin-bottom:6px">
+        <span style="font-size:1rem">${iconos[ev.tipo]||'⚠'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.65rem;font-weight:700;color:${cols[ev.tipo]||'var(--dim)'}">Día ${ev.dia} — ${ev.tipo.charAt(0).toUpperCase()+ev.tipo.slice(1)}</div>
+          <div style="font-size:.6rem;color:var(--dim)">${ev.reduccion}% reducción${ev.nota?` · ${ev.nota}`:''}</div>
+        </div>
+        <button onclick="eliminarEvMort(${p.id},${ev.id})" style="background:rgba(255,82,82,.1);border:1px solid rgba(255,82,82,.2);color:var(--r);border-radius:var(--rsm);padding:5px 8px;font-size:.6rem;cursor:pointer;flex-shrink:0">✕</button>
+      </div>`;
+    }).join('')}`:'<div style="text-align:center;color:var(--dim);font-size:.65rem;padding:12px 0">Sin eventos registrados</div>'}
+  `;
+
+  const alimHTML=`
+    ${fcaInfo}
+    ${fechaRow('a')}
+    <div id="aCont_${p.id}">${buildAlimRow(p.id,0)}</div>
+    <div class="brow" style="margin-top:8px">
+      <button class="btn sm btnAddAlim" data-id="${p.id}">➕ Otro producto</button>
+      <button class="btn sm pr btnSaveAlim" data-id="${p.id}">💾 Guardar alimento</button>
+    </div>`;
+
+  const quimHTML=`
+    ${fechaRow('q')}
+    <div class="qblock">
+      <div class="rel">
+        <input type="text" id="qNom_${p.id}" placeholder="Nombre del producto (escribe para buscar)" autocomplete="off">
+        <div class="sug" id="qSug_${p.id}" style="display:none"></div>
+      </div>
+      <div class="brow" style="margin-top:7px">
+        <input type="number" id="qCant_${p.id}" placeholder="Cantidad" step="0.01" style="flex:2">
+        <input type="text" id="qUnid_${p.id}" placeholder="g / kg / L" style="flex:1.5">
+        <button class="btn sm btnSaveQuim" data-id="${p.id}" style="flex:.7">➕</button>
+      </div>
+      <div id="qAy_${p.id}" style="font-size:.6rem;color:var(--dim);margin-top:3px"></div>
+    </div>`;
+
+  const aguaHTML=HORARIOS.map(h=>{
+    const hId=h.replace(':','');
+    const regs=ciclo.aguaRegistros.filter(r=>r.horario===h).sort((a,b)=>a.dia-b.dia);
+    const ult=regs.at(-1); const low=ult&&ult.oxigeno<4;
+    return `<div class="hblock">
+      <div class="hhead">
+        <span class="hlbl">🕒 ${h}</span>
+        ${ult?`<span class="hlast ${low?'wn':''}">O₂:${ult.oxigeno} · ${ult.temperatura}°C · ${ult.fechaReal}</span>`:'<span class="hlast">Sin datos</span>'}
+      </div>
+      <div class="date-row" style="margin-bottom:8px">
+        <label>📅 Fecha:</label>
+        <input type="date" id="wFec_${p.id}_${hId}" value="${hoy}" max="${hoy}" style="flex:1">
+      </div>
+      <div class="hinps">
+        <input type="number" id="wT_${p.id}_${hId}" placeholder="°C" step="0.1" style="flex:1">
+        <input type="number" id="wO_${p.id}_${hId}" placeholder="O₂ mg/L" step="0.1" style="flex:1">
+        <button class="btn sm btnAgua" data-id="${p.id}" data-h="${h}" style="flex:.6">➕</button>
+      </div>
+      ${regs.length?`<div class="chbox" style="margin-top:8px"><canvas id="gox_${p.id}_${hId}" style="max-height:90px"></canvas></div>`:''}
+    </div>`;
+  }).join('')+`<div id="proy_${p.id}" class="prlist"></div>`;
+
+  const pcClass = esCosechada ? 'cosechada' : (alO2?'al':ultP?.estado==='ok'?'ok':'');
+  return `<div class="pc ${pcClass}" data-id="${p.id}">
+    <div class="ph" onclick="togglePila(${p.id})">
+      <div class="rdot" style="${esCosechada?'box-shadow:0 0 7px rgba(192,132,252,.6);background:url(https://i.pinimg.com/originals/d8/69/1d/d8691d0911c35769fa26ef6bc82cefc0.jpg) center/cover':''}"></div>
+      <span class="pnm" style="${esCosechada?'color:#c084fc':''}">${esc(p.nombre)}</span>
+      ${esCosechada?'<span class="tag" style="background:rgba(192,132,252,.18);border-color:rgba(192,132,252,.4);color:#c084fc;font-size:.52rem">🦐 COSECHADA</span>':''}
+      ${!esCosechada&&alO2?'<span class="tag r" style="font-size:.55rem">⚠O₂</span>':''}
+      ${!esCosechada&&muestreoHoy?'<span class="tag" style="background:rgba(255,214,10,.1);border-color:rgba(255,214,10,.4);color:#ffd60a;font-size:.52rem">⚖ PESAR HOY</span>':''}
+      <span class="pch ${ab?'op':''}">▶</span>
+      <span class="pdtag" style="${esCosechada?'background:rgba(192,132,252,.1);border-color:rgba(192,132,252,.3);color:#c084fc':''}">DÍA ${dia}</span>
+    </div>
+    <div class="pbar"><div class="pfill" style="width:${prog}%;${esCosechada?'background:linear-gradient(90deg,#c084fc,#a855f7)':''}"></div></div>
+    <div class="pcycrow">🌱 ${esc(ciclo.nombre)} · ${fmt(ciclo.fechaSiembra)}${ciclo.responsable?` · ${esc(ciclo.responsable)}`:''}${esCosechada?` · <span style="color:#c084fc">Cosechada ${fmt(p.fechaCosecha||'')}</span>`:''}</div>
+    <div class="srow">
+      <div class="chip">Días: <b>${dia}</b></div>
+      <div class="chip ${ultP?.estado==='deficit'?'wn':ultP?.estado==='bajo'?'ca':''}">Peso: <b>${ultP?ultP.peso.toFixed(2)+'g':'—'}</b></div>
+      ${desv!==null?`<div class="chip ${desv<0?'wn':''}">Desv: <b>${desv>=0?'+':''}${desv}g</b></div>`:''}
+      ${PILA_HA[p.nombre]?`<div class="chip">Hectáreas: <b>${PILA_HA[p.nombre]} ha</b></div>`:''}
+      ${ciclo.densidad?`<div class="chip">Densidad: <b>${Number(ciclo.densidad).toLocaleString()} larv/m²</b></div>`:''}
+      ${ciclo.larvasSembradas?`<div class="chip">Sembradas: <b>${Number(ciclo.larvasSembradas).toLocaleString()}</b></div>`:''}
+      ${(()=>{const sv=calcSobrevivencia(ciclo,dia);return sv?`<div class="chip ${sv.pct<70?'wn':''}">Sobrev: <b>${sv.pct}%</b> <span style="font-size:.55rem">(${sv.animalesVivos.toLocaleString()} anim.)</span></div>`:'';})()}
+      ${(()=>{const fc=calcFCA(ciclo);return fc&&fc.fca!==null?`<div class="chip ca">FCA: <b>${fc.fca}</b></div>`:'';})()}
+      ${!esCosechada?`<div class="chip">Muestreos: <b>${muestreosHechos}/${DIAS_MUESTREO.length}</b></div>`:''}
+      ${!esCosechada&&proxMuestreo?`<div class="chip">Próximo ⚖: <b>D${proxMuestreo}</b></div>`:''}
+    </div>
+    ${!esCosechada&&evHoy.length?`<div class="evbanner">🔴 HOY DÍA ${dia}: ${evHoy.join(' · ')}</div>`:''}
+    ${!esCosechada&&alO2?`<div class="o2banner">🚨 ALERTA: O₂ por debajo del mínimo (&lt; 4 mg/L)</div>`:''}
+    ${!esCosechada&&muestreoHoy?`<div class="evbanner" style="background:rgba(255,214,10,.07);border-color:rgba(255,214,10,.3);color:var(--y)">⚖ MUESTREO DE PESO PROGRAMADO HOY (Día ${dia})</div>`:''}
+
+    <div class="pb ${ab?'op':''}" id="pb_${p.id}">
+      <div class="brow" style="margin-bottom:11px">
+        ${!esCosechada?`<button class="btn sm inf btnNC" data-id="${p.id}">🔄 Nuevo ciclo</button>`:''}
+        <button class="btn sm btnHist" data-id="${p.id}">📋 Historial</button>
+        ${!esCosechada?`<button class="btn sm" style="background:rgba(192,132,252,.1);border-color:rgba(192,132,252,.3);color:#c084fc" onclick="cosecharPila(${p.id})">🦐 Cosechar</button>`:''}
+        ${esCosechada?`<button class="btn sm inf btnReact" data-id="${p.id}">♻ Reactivar</button>`:''}
+        <button class="btn sm dn btnDel" data-id="${p.id}">🗑</button>
+      </div>`
+    + (!esCosechada ? buildMuestreoTimeline(p.id, pesos) : buildResumenCosecha(p, ciclo))
+    + `
+      <div class="ncbox" id="ncb_${p.id}">
+        <div style="font-size:.63rem;color:var(--c);letter-spacing:.12em;text-transform:uppercase;margin-bottom:9px">NUEVO CICLO</div>
+        <input type="text" id="ncN_${p.id}" placeholder="Nombre del ciclo" style="margin-bottom:6px">
+        <input type="date" id="ncF_${p.id}" style="margin-bottom:6px">
+        <input type="number" id="ncL_${p.id}" placeholder="Larvas sembradas (unidades)" step="1" style="margin-bottom:3px" oninput="calcDensNC('${p.id}','${p.nombre}')">
+        <div id="ncDCalc_${p.id}" style="font-size:.62rem;color:var(--g);min-height:14px;margin-bottom:5px"></div>
+        <input type="hidden" id="ncD_${p.id}">
+        <input type="number" id="ncMort_${p.id}" placeholder="Mortalidad diaria %" step="0.01" min="0" max="100" value="0.5" style="margin-bottom:6px">
+        <input type="text" id="ncR_${p.id}" placeholder="Responsable (opc)" style="margin-bottom:9px">
+        <div class="brow">
+          <button class="btn sm pr btnNcOk" data-id="${p.id}">✅ Confirmar</button>
+          <button class="btn sm dn btnNcCan" data-id="${p.id}">✕ Cancelar</button>
+        </div>
+      </div>
+
+      <div class="stabs">
+        <button class="stab ac" data-sp="eventos"    data-pid="${p.id}">📅 Eventos</button>
+        <button class="stab"    data-sp="peso"        data-pid="${p.id}">⚖ Peso</button>
+        ${!esCosechada?`<button class="stab" data-sp="mortevents" data-pid="${p.id}">📉 Sobrevivencia</button>
+        <button class="stab" data-sp="alimento"  data-pid="${p.id}">🍽 Alimento</button>
+        <button class="stab" data-sp="quimicos"  data-pid="${p.id}">🧪 Químicos</button>
+        <button class="stab" data-sp="agua"      data-pid="${p.id}">💧 Agua</button>`:''}
+      </div>
+
+      <div class="spn ac" id="sp_eventos_${p.id}"><div class="evl">${evHTML}</div></div>
+      <div class="spn"    id="sp_peso_${p.id}">${pesoHTML}</div>
+      ${!esCosechada?`<div class="spn" id="sp_mortevents_${p.id}">${mortHTML}</div>
+      <div class="spn" id="sp_alimento_${p.id}">${alimHTML}</div>
+      <div class="spn"    id="sp_quimicos_${p.id}">${quimHTML}</div>
+      <div class="spn"    id="sp_agua_${p.id}">${aguaHTML}</div>`:''}
+    </div>
+  </div>`;
+}
+
+function buildAlimRow(pilaId,idx){
+  return `<div class="arow" id="ar_${pilaId}_${idx}">
+    <div class="arow-grid">
+      <div class="rel">
+        <span class="lbl">Producto</span>
+        <input type="text" class="aNom" id="aN_${pilaId}_${idx}" placeholder="Escribir o seleccionar..." autocomplete="off">
+        <div class="sug" id="aSug_${pilaId}_${idx}" style="display:none"></div>
+      </div>
+      <div>
+        <span class="lbl">Cantidad</span>
+        <input type="number" class="aCant" id="aC_${pilaId}_${idx}" placeholder="0.00" step="0.01">
+      </div>
+      <div>
+        <span class="lbl">Unidad</span>
+        <select class="aUnit" id="aU_${pilaId}_${idx}">
+          <option value="kg">kg</option>
+          <option value="g">g</option>
+          <option value="lb">lb</option>
+          <option value="sacos">sacos</option>
+          <option value="L">L</option>
+        </select>
+      </div>
+    </div>
+    ${idx>0?`<button class="btn dn xs" style="margin-top:7px;width:auto" onclick="this.closest('.arow').remove()">✕ Quitar</button>`:''}
+  </div>`;
+}
+
+/* ──────────────────────────────────────────
+   BIND EVENTOS DE PILA
+────────────────────────────────────────── */
+function bindPila(p){
+  aRowCount[p.id]=aRowCount[p.id]||1;
+  const ciclo=getCiclo(p);
+  const pesos=[...ciclo.pesosRegistros].sort((a,b)=>a.dia-b.dia);
+
+  if(expandidas.has(p.id)){
+    setTimeout(()=>{
+      if(pesos.length) mkGrafPeso(p.id,pesos);
+      for(const h of HORARIOS) mkGrafOx(p.id,h,ciclo);
+    },80);
+  }
+  const pDiv=document.getElementById(`proy_${p.id}`);
+  if(pDiv){
+    const ph=HORARIOS.map(h=>{const pr=proyOx(p.id,h);return pr?`<div class="pri ${pr.crit?'cr':''}">${pr.msg}</div>`:''}).filter(Boolean).join('');
+    pDiv.innerHTML=ph||'<div style="font-size:.62rem;color:var(--dim);margin-top:4px">Registra ≥2 mediciones/horario para proyección.</div>';
+  }
+
+  document.querySelectorAll(`.stab[data-pid="${p.id}"]`).forEach(tab=>{
+    tab.onclick=()=>{
+      const sp=tab.dataset.sp, pid=tab.dataset.pid;
+      document.querySelectorAll(`.stab[data-pid="${pid}"]`).forEach(t=>t.classList.toggle('ac',t.dataset.sp===sp));
+      document.querySelectorAll(`#pb_${pid} .spn`).forEach(pn=>pn.classList.toggle('ac',pn.id===`sp_${sp}_${pid}`));
+      if(sp==='peso'&&pesos.length) setTimeout(()=>mkGrafPeso(parseInt(pid),pesos),60);
+      if(sp==='agua') setTimeout(()=>HORARIOS.forEach(h=>mkGrafOx(parseInt(pid),h,ciclo)),60);
+    };
+  });
+
+  document.querySelector(`.btnPeso[data-id="${p.id}"]`)?.addEventListener('click',async()=>{
+    const v=parseFloat(document.getElementById(`pIn_${p.id}`).value);
+    const e=parseFloat(document.getElementById(`pEsp_${p.id}`).value)||0;
+    const f=document.getElementById(`fec_p_${p.id}`)?.value||todayStr();
+    await regPeso(p.id,v,e,f);
+    document.getElementById(`pIn_${p.id}`).value='';
+    document.getElementById(`pEsp_${p.id}`).value='';
+  });
+
+  bindAlimRow(p.id,0);
+  document.querySelector(`.btnAddAlim[data-id="${p.id}"]`)?.addEventListener('click',()=>{
+    const n=aRowCount[p.id]++;
+    const cont=document.getElementById(`aCont_${p.id}`);
+    const div=document.createElement('div');
+    div.innerHTML=buildAlimRow(p.id,n);
+    cont.appendChild(div.firstElementChild);
+    bindAlimRow(p.id,n);
+  });
+  document.querySelector(`.btnSaveAlim[data-id="${p.id}"]`)?.addEventListener('click',async()=>{
+    const items=[];
+    document.querySelectorAll(`#aCont_${p.id} .arow`).forEach(row=>{
+      const nom=row.querySelector('.aNom')?.value.trim();
+      const cant=parseFloat(row.querySelector('.aCant')?.value)||0;
+      const unit=row.querySelector('.aUnit')?.value||'kg';
+      if(nom&&cant>0) items.push({nombre:nom,cantidad:cant,unidad:unit});
+    });
+    if(!items.length){ toast("⚠ Ingrese al menos un producto con cantidad","wn"); return; }
+    const fec=document.getElementById(`fec_a_${p.id}`)?.value||todayStr();
+    await regAlimento(p.id,items,fec);
+    document.querySelectorAll(`#aCont_${p.id} .aNom`).forEach(i=>i.value='');
+    document.querySelectorAll(`#aCont_${p.id} .aCant`).forEach(i=>i.value='');
+    const rows=document.querySelectorAll(`#aCont_${p.id} .arow`);
+    rows.forEach((r,i)=>{ if(i>0) r.remove(); });
+    aRowCount[p.id]=1;
+  });
+
+  const qN=document.getElementById(`qNom_${p.id}`);
+  const qS=document.getElementById(`qSug_${p.id}`);
+  const qU=document.getElementById(`qUnid_${p.id}`);
+  const qA=document.getElementById(`qAy_${p.id}`);
+  if(qN){
+    qN.oninput=()=>{
+      const v=qN.value.toLowerCase(); if(!v){qS.style.display='none';return;}
+      const m=QUIM_SUG.filter(x=>x.toLowerCase().includes(v)).slice(0,5);
+      if(!m.length){qS.style.display='none';return;}
+      qS.innerHTML=m.map(x=>`<div class="sug-item">${x}</div>`).join('');
+      qS.style.display='block';
+      qS.querySelectorAll('.sug-item').forEach(el=>el.onclick=()=>{
+        qN.value=el.textContent; qS.style.display='none';
+        const ud=QUIM_UNID[el.textContent]||'g'; qU.value=ud;
+        if(qA) qA.textContent=`Unidad sugerida: ${ud}`;
+      });
+    };
+  }
+  document.querySelector(`.btnSaveQuim[data-id="${p.id}"]`)?.addEventListener('click',async()=>{
+    const prod=(qN?.value||'').trim();
+    const cant=parseFloat(document.getElementById(`qCant_${p.id}`)?.value)||0;
+    const unid=(qU?.value||'').trim();
+    const fec=document.getElementById(`fec_q_${p.id}`)?.value||todayStr();
+    await regQuimico(p.id,prod,cant,unid,fec);
+    if(qN) qN.value='';
+    const qC=document.getElementById(`qCant_${p.id}`); if(qC) qC.value='';
+  });
+
+  document.querySelectorAll(`.btnAgua[data-id="${p.id}"]`).forEach(btn=>{
+    btn.onclick=async()=>{
+      const h=btn.dataset.h, hId=h.replace(':','');
+      const t=parseFloat(document.getElementById(`wT_${p.id}_${hId}`)?.value);
+      const o=parseFloat(document.getElementById(`wO_${p.id}_${hId}`)?.value);
+      const f=document.getElementById(`wFec_${p.id}_${hId}`)?.value||todayStr();
+      if(isNaN(t)||isNaN(o)){ toast("⚠ Complete temperatura y oxígeno","wn"); return; }
+      await regAgua(p.id,h,t,o,f);
+      document.getElementById(`wT_${p.id}_${hId}`).value='';
+      document.getElementById(`wO_${p.id}_${hId}`).value='';
+    };
+  });
+
+  document.querySelector(`.btnNC[data-id="${p.id}"]`)?.addEventListener('click',()=>{
+    document.getElementById(`ncb_${p.id}`).classList.toggle('op');
+  });
+  document.querySelector(`.btnNcOk[data-id="${p.id}"]`)?.addEventListener('click',async()=>{
+    const nom=document.getElementById(`ncN_${p.id}`)?.value.trim()||'';
+    const fec=document.getElementById(`ncF_${p.id}`)?.value||'';
+    const dens=parseFloat(document.getElementById(`ncD_${p.id}`)?.value)||null;
+    const resp=document.getElementById(`ncR_${p.id}`)?.value.trim()||'';
+    const mort=parseFloat(document.getElementById(`ncMort_${p.id}`)?.value)||0.5;
+    const larvasIni=parseFloat(document.getElementById(`ncL_${p.id}`)?.value)||0;
+    if(await agregarCiclo(p.id,nom,fec,dens,resp,mort,larvasIni)){
+      document.getElementById(`ncb_${p.id}`).classList.remove('op');
+      ['ncN_','ncF_','ncD_','ncL_','ncR_','ncMort_'].forEach(pf=>{ const el=document.getElementById(pf+p.id); if(el)el.value=''; });
+      const mortEl=document.getElementById(`ncMort_${p.id}`); if(mortEl) mortEl.value='0.5';
+      const dcEl=document.getElementById(`ncDCalc_${p.id}`); if(dcEl) dcEl.textContent='';
+    }
+  });
+  document.querySelector(`.btnNcCan[data-id="${p.id}"]`)?.addEventListener('click',()=>{
+    document.getElementById(`ncb_${p.id}`).classList.remove('op');
+  });
+
+  document.querySelector(`.btnReact[data-id="${p.id}"]`)?.addEventListener('click',()=>reactivarPila(p.id));
+  document.querySelector(`.btnHist[data-id="${p.id}"]`)?.addEventListener('click',()=>abrirHistorial(p.id));
+  document.querySelector(`.btnDel[data-id="${p.id}"]`)?.addEventListener('click',()=>eliminarPila(p.id));
+
+  // Mortalidad: preview calc
+  const meRedEl=document.getElementById(`meRed_${p.id}`);
+  const meDiaEl=document.getElementById(`meDia_${p.id}`);
+  const meCalcEl=document.getElementById(`meCalc_${p.id}`);
+  function updateMeCalc(){
+    if(!meRedEl||!meDiaEl||!meCalcEl) return;
+    const red=parseFloat(meRedEl.value)||0;
+    const d=parseInt(meDiaEl.value)||dia;
+    const ciclo=getCiclo(p);
+    const svAntes=calcSobrevivencia(ciclo, d);
+    if(svAntes&&red>0){
+      const despues=Math.round(svAntes.animalesVivos*(1-red/100));
+      meCalcEl.textContent=`${svAntes.animalesVivos.toLocaleString()} → ${despues.toLocaleString()} animales`;
+      meCalcEl.style.color=red>20?'var(--r)':'var(--y)';
+    } else { meCalcEl.textContent=''; }
+  }
+  meRedEl?.addEventListener('input', updateMeCalc);
+  meDiaEl?.addEventListener('input', updateMeCalc);
+
+  document.querySelector(`.btnSaveMort[data-id="${p.id}"]`)?.addEventListener('click',async()=>{
+    const tipo=document.getElementById(`meTipo_${p.id}`)?.value||'otro';
+    const red=parseFloat(document.getElementById(`meRed_${p.id}`)?.value)||0;
+    const d=parseInt(document.getElementById(`meDia_${p.id}`)?.value)||dia;
+    const nota=(document.getElementById(`meNota_${p.id}`)?.value||'').trim();
+    await regEvMort(p.id,tipo,red,d,nota);
+    const redEl=document.getElementById(`meRed_${p.id}`); if(redEl) redEl.value='';
+    const notaEl=document.getElementById(`meNota_${p.id}`); if(notaEl) notaEl.value='';
+    if(meCalcEl) meCalcEl.textContent='';
+  });
+}
+
+function bindAlimRow(pilaId,idx){
+  const inp=document.getElementById(`aN_${pilaId}_${idx}`);
+  const sug=document.getElementById(`aSug_${pilaId}_${idx}`);
+  if(!inp||!sug) return;
+  inp.oninput=()=>{
+    const v=inp.value.toLowerCase(); if(!v){sug.style.display='none';return;}
+    const m=ALIM_SUG.filter(x=>x.toLowerCase().includes(v)).slice(0,5);
+    if(!m.length){sug.style.display='none';return;}
+    sug.innerHTML=m.map(x=>`<div class="sug-item">${x}</div>`).join('');
+    sug.style.display='block';
+    sug.querySelectorAll('.sug-item').forEach(el=>el.onclick=()=>{ inp.value=el.textContent; sug.style.display='none'; });
+  };
+  document.addEventListener('click',e=>{ if(!inp.contains(e.target)&&!sug.contains(e.target)) sug.style.display='none'; },{passive:true});
+}
+
+function mkGrafPeso(pilaId,pesos){
+  const c=document.getElementById(`gpes_${pilaId}`); if(!c) return;
+  if(c._ch) c._ch.destroy();
+  c._ch=new Chart(c,{type:'line',data:{labels:pesos.map(r=>`D${r.dia}(${r.fechaReal.slice(5)})`),datasets:[
+    {label:'Real(g)',data:pesos.map(r=>r.peso),borderColor:'#00ff8c',backgroundColor:'#00ff8c12',fill:true,tension:.25,pointRadius:3,pointBackgroundColor:pesos.map(r=>r.color||'#00ff8c')},
+    {label:'Esp(g)',data:pesos.map(r=>r.pesoEsperado||null),borderColor:'#ff2d55',borderDash:[5,5],fill:false,pointRadius:2}
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#dff0e8',font:{size:9,family:'JetBrains Mono'}}}},scales:{x:{ticks:{color:'#3a6650',font:{size:7},maxRotation:30}},y:{ticks:{color:'#3a6650',font:{size:8}}}}}});
+}
+function mkGrafOx(pilaId,horario,ciclo){
+  const cId=`gox_${pilaId}_${horario.replace(':','')}`;
+  const c=document.getElementById(cId); if(!c) return;
+  const regs=ciclo.aguaRegistros.filter(r=>r.horario===horario).sort((a,b)=>a.dia-b.dia);
+  if(!regs.length) return;
+  if(c._ch) c._ch.destroy();
+  const col=regs.some(r=>r.oxigeno<4)?'#ff2d55':'#00d4ff';
+  c._ch=new Chart(c,{type:'line',data:{labels:regs.map(r=>`D${r.dia}`),datasets:[{label:`O₂`,data:regs.map(r=>r.oxigeno),borderColor:col,backgroundColor:col+'15',fill:true,tension:.25,pointRadius:2}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#3a6650',font:{size:7}}},y:{min:0,suggestedMax:9,ticks:{color:'#3a6650',font:{size:8}}}}}});
+}
+
+/* ══════════════════════════════════════════
+   TOGGLE PILA
+══════════════════════════════════════════ */
+window.togglePila=function(pilaId){
+  const body=document.getElementById(`pb_${pilaId}`);
+  const chev=document.querySelector(`.pc[data-id="${pilaId}"] .pch`);
+  if(!body) return;
+  const ab=body.classList.contains('op');
+  body.classList.toggle('op'); if(chev) chev.classList.toggle('op');
+  if(!ab){
+    expandidas.add(pilaId);
+    const p=pilas.find(x=>x.id===pilaId);
+    if(p){ const ciclo=getCiclo(p); const pesos=[...ciclo.pesosRegistros].sort((a,b)=>a.dia-b.dia);
+      setTimeout(()=>{ if(pesos.length) mkGrafPeso(pilaId,pesos); HORARIOS.forEach(h=>mkGrafOx(pilaId,h,ciclo)); },80); }
+  } else expandidas.delete(pilaId);
+};
+
+/* ══════════════════════════════════════════
+   NAVEGACIÓN
+══════════════════════════════════════════ */
+function navTo(pgId){
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('ac',p.id===pgId));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('ac',b.dataset.pg===pgId));
+  if(pgId==='pgCal') renderCal();
+  if(pgId==='pgRep'){ poblarSels(); setTimeout(()=>{ renderGP(); renderGO(); },80); }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.nb').forEach(btn=>btn.onclick=()=>navTo(btn.dataset.pg));
+
+/* ══════════════════════════════════════════
+   MODAL EVENTS
+══════════════════════════════════════════ */
+document.getElementById("mClose").onclick=()=>document.getElementById("modH").classList.remove("op");
+document.getElementById("modH").onclick=e=>{ if(e.target===document.getElementById("modH")) document.getElementById("modH").classList.remove("op"); };
+document.querySelectorAll(".mtabs .stab").forEach(t=>t.onclick=()=>renderModTab(t.dataset.mt));
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.getElementById("modH").classList.remove("op"); });
+
+/* ══════════════════════════════════════════
+   AJUSTES EVENTS
+══════════════════════════════════════════ */
+document.getElementById("tgNotif").onclick=async function(){
+  if(!notifOn){
+    if(Notification.permission!=='granted') await Notification.requestPermission();
+    notifOn=Notification.permission==='granted';
+    if(notifOn){
+      localStorage.setItem('nerv_notif','1');
+      try{
+        const reg=await navigator.serviceWorker?.ready;
+        if(reg && 'periodicSync' in reg){
+          await reg.periodicSync.register('nerv-check-alerts',{minInterval:60*60*1000});
+        }
+      }catch(e){}
+      scheduleNextAlerts();
+    }
+  } else {
+    notifOn=false;
+    localStorage.removeItem('nerv_notif');
+  }
+  this.classList.toggle('on',notifOn);
+  toast(notifOn?'🔔 Notificaciones persistentes activas':'🔕 Desactivadas',notifOn?'':'wn');
+};
+document.getElementById("bSyncF").onclick=()=>syncAll(true);
+document.getElementById("bFbInfo").onclick=()=>{
+  const c=document.getElementById("fbSetupCard"); c.style.display=c.style.display==='none'?'block':'none';
+};
+document.getElementById("bBorrar").onclick=async()=>{
+  if(!confirm("¿BORRAR TODOS los datos locales? Acción irreversible.")) return;
+  pilas=[]; await idbGuardar(); actualizar(); toast("Datos borrados","er");
+};
+document.getElementById("bCSV").onclick=exportCSV;
+document.getElementById("bPDF").onclick=exportPDF;
+document.getElementById("bBK").onclick=exportBackup;
+document.getElementById("bRest").onclick=()=>document.getElementById("rFile").click();
+document.getElementById("rFile").onchange=e=>{ if(e.target.files.length) importBackup(e.target.files[0]); e.target.value=''; };
+document.getElementById("selGP").onchange=renderGP;
+document.getElementById("selGOP").onchange=renderGO;
+document.getElementById("selGOH").onchange=renderGO;
+
+/* ══════════════════════════════════════════
+   CREAR PILA
+══════════════════════════════════════════ */
+document.getElementById("selPId").onchange=function(){
+  document.getElementById("pCust").style.display=this.value==='__'?'block':'none';
+  calcDensNueva();
+};
+function calcDensNueva(){
+  const sel=document.getElementById("selPId");
+  const nom=sel.value==='__'?document.getElementById("pCust").value:sel.value;
+  const larvas=parseFloat(document.getElementById("cLarvas").value)||0;
+  const haCust=parseFloat(document.getElementById("cHaCust").value)||0;
+  const ha=PILA_HA[nom]||haCust||null;
+  const el=document.getElementById("densCalc");
+  const haInp=document.getElementById("cHaCust");
+  if(PILA_HA[nom]){ haInp.value=PILA_HA[nom]; haInp.readOnly=true; haInp.style.opacity='.6'; }
+  else { haInp.readOnly=false; haInp.style.opacity='1'; }
+  if(larvas>0 && ha){
+    const m2=ha*10000;
+    const dens=Math.round(larvas/m2);
+    const totalAnimales=larvas;
+    document.getElementById("cDens").value=dens;
+    el.innerHTML=`📐 <b>${ha} ha</b> · Densidad: <b>${dens.toLocaleString()} larvas/m²</b> · Animales: <b>${totalAnimales.toLocaleString()}</b>`;
+  } else if(larvas>0 && !ha){
+    document.getElementById("cDens").value='';
+    el.textContent=`⚠ Ingresa las hectáreas de esta pila`;
+  } else {
+    document.getElementById("cDens").value='';
+    el.textContent='';
+  }
+}
+window.calcDensNC=function(pilaId,pilaNom){
+  const larvas=parseFloat(document.getElementById(`ncL_${pilaId}`)?.value)||0;
+  const ha=PILA_HA[pilaNom]||null;
+  const el=document.getElementById(`ncDCalc_${pilaId}`);
+  const hdEl=document.getElementById(`ncD_${pilaId}`);
+  if(!el||!hdEl) return;
+  if(larvas>0 && ha){
+    const dens=Math.round(larvas/(ha*10000));
+    hdEl.value=dens;
+    el.textContent=`📐 ${ha} ha · Densidad: ${dens.toLocaleString()} larvas/m² · Animales: ${larvas.toLocaleString()}`;
+  } else if(larvas>0){
+    hdEl.value=''; el.textContent='⚠ Estanque sin hectáreas registradas';
+  } else {
+    hdEl.value=''; el.textContent='';
+  }
+};
+document.getElementById("cLarvas").oninput=calcDensNueva;
+document.getElementById("btnCP").onclick=async()=>{
+  const sel=document.getElementById("selPId");
+  const nom=sel.value==='__'?document.getElementById("pCust").value:sel.value;
+  const cnom=document.getElementById("cNom").value;
+  const fecha=document.getElementById("cFec").value;
+  const dens=document.getElementById("cDens").value;
+  const resp=document.getElementById("cResp").value;
+  const mort=parseFloat(document.getElementById("cMort").value)||0.5;
+  const larvasIni=parseFloat(document.getElementById("cLarvas").value)||0;
+  if(await crearPila(nom,cnom,fecha,dens,resp,mort,larvasIni)){
+    sel.value=''; document.getElementById("pCust").value='';
+    document.getElementById("pCust").style.display='none';
+    ['cNom','cFec','cDens','cLarvas','cResp','cHaCust','cMort'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+    document.getElementById("cMort").value='0.5';
+    document.getElementById("densCalc").textContent='';
+    navTo('pgHome');
+  }
+};
+document.getElementById("buscar").oninput=e=>{ filtro=e.target.value; renderizar(); };
+document.getElementById("bON").onclick=()=>{ orden='nombre'; actualizar(); };
+document.getElementById("bOF").onclick=()=>{ orden='fecha'; actualizar(); };
+document.getElementById("bFiltCos").onclick=function(){
+  filtroCos=!filtroCos;
+  this.style.background=filtroCos?'rgba(192,132,252,.2)':'';
+  this.style.borderColor=filtroCos?'rgba(192,132,252,.5)':'';
+  this.style.color=filtroCos?'#c084fc':'';
+  this.title=filtroCos?'Mostrando solo activas':'Mostrar todas';
+  renderizar();
+};
+
+/* ══════════════════════════════════════════
+   ALERTAS PERIÓDICAS
+══════════════════════════════════════════ */
+function checkAlertas(){
+  if(!notifOn) return;
+  for(const p of pilas){
+    if(p.estado==="cosechada") continue;
+    const c=getCiclo(p), dia=diaDe(c.fechaSiembra);
+    if(EVENTOS[dia])   notif('🔴 Evento HOY',    `${p.nombre} día ${dia}: ${EVENTOS[dia].join(', ')}`);
+    if(EVENTOS[dia+1]) notif('🟡 Evento mañana', `${p.nombre} día ${dia+1}: ${EVENTOS[dia+1].join(', ')}`);
+  }
+}
+function scheduleNextAlerts(){
+  if(!notifOn) return;
+  const tomorrow=new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+  tomorrow.setHours(6,0,0,0);
+  for(const p of pilas){
+    if(p.estado==="cosechada") continue;
+    const c=getCiclo(p), dia=diaDe(c.fechaSiembra)+1;
+    if(EVENTOS[dia]){
+      scheduleNotif(
+        '🔴 Evento HOY — '+p.nombre,
+        `Día ${dia}: ${EVENTOS[dia].join(', ')}`,
+        tomorrow.getTime(),
+        `nerv-sched-${p.id}-d${dia}`
+      );
+    }
+  }
+}
+setInterval(checkAlertas, 60*60*1000);
+setInterval(()=>syncAll(false), 30*60*1000);
+
+/* ══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
+(async()=>{
+  await abrirIDB();
+  if(localStorage.getItem('nerv_notif')==='1' && Notification.permission==='granted'){
+    notifOn=true;
+    document.getElementById('tgNotif')?.classList.add('on');
+  }
+  await initAuth();
+})();
+</script>
+
+
+
+<script>
+
+/* ════════════════════════════════════════
+   AUTENTICACIÓN — usuario / contraseña
+════════════════════════════════════════ */
+
+// Estado de sesión actual
+let currentUser   = null;   // { uid, email, name, role }
+let isReadOnly    = false;  // true cuando rol = gerencia
+
+/* ── Hash SHA-256 simple para no almacenar pass en claro ── */
+async function sha256(msg){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+/* ── Guardar/leer sesión en localStorage ── */
+function saveSession(u){ localStorage.setItem('nerv_session', JSON.stringify(u)); }
+function loadSession(){ try{ return JSON.parse(localStorage.getItem('nerv_session')); }catch{ return null; } }
+function clearSession(){ localStorage.removeItem('nerv_session'); localStorage.removeItem('nerv_offline_cred'); }
+
+/* ── Offline credential cache ── */
+async function cacheCredentials(email, pass){
+  const hash = await sha256(email.toLowerCase() + ':' + pass);
+  localStorage.setItem('nerv_offline_cred', JSON.stringify({ email: email.toLowerCase(), hash }));
+}
+async function verifyOfflineCredentials(email, pass){
+  const cached = localStorage.getItem('nerv_offline_cred');
+  if(!cached) return false;
+  try {
+    const { email: cEmail, hash: cHash } = JSON.parse(cached);
+    if(cEmail !== email.toLowerCase()) return false;
+    const hash = await sha256(email.toLowerCase() + ':' + pass);
+    return hash === cHash;
+  } catch{ return false; }
+}
+
+/* ── Perfil de usuario desde Firestore ── */
+async function fetchUserProfile(uid){
+  if (!window._fbReady) return null;
+  const {doc, getDocs, collection} = window._fb;
+  try {
+    const snap = await getDocs(collection(window._fbDB, 'usuarios'));
+    for (const d of snap.docs){
+      if (d.id === uid) return d.data();
+    }
+  } catch(e){ console.warn('fetchUserProfile:', e); }
+  return null;
+}
+
+/* ── Inicializar auth gate ── */
+async function initAuth(){
+  // 1. ¿Hay sesión guardada localmente?
+  const saved = loadSession();
+  if (saved && saved.uid){
+    // Verificar que el usuario siga activo en Firestore (si hay red)
+    let profile = null;
+    if (window._fbReady){
+      profile = await fetchUserProfile(saved.uid);
+    }
+    if (profile || !window._fbReady){
+      // Usar datos frescos si los hay, si no usar caché
+      const u = profile ? { uid: saved.uid, email: saved.email, name: profile.nombre || saved.name, role: profile.rol || saved.role } : saved;
+      await applySession(u, false);
+      return;
+    }
+  }
+
+  // 2. Mostrar pantalla de login
+  showLoginScreen();
+}
+
+/* ── Mostrar pantalla de login ── */
+function showLoginScreen(){
+  const ov = document.getElementById('authOverlay');
+  ov.classList.remove('out');
+  ov.style.display = 'flex';
+  const offHint = document.getElementById('offlineLoginHint');
+  if (offHint) {
+    const hasCred = !!localStorage.getItem('nerv_offline_cred');
+    offHint.style.display = (!navigator.onLine && hasCred) ? 'block' : 'none';
+  }
+  document.getElementById('authPass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('authEmail').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('authPass').focus();
+  });
+}
+
+/* ── Intentar login ── */
+async function doLogin(){
+  const email = document.getElementById('authEmail').value.trim();
+  const pass  = document.getElementById('authPass').value;
+  const errEl = document.getElementById('authErr');
+  const loadEl= document.getElementById('authLoading');
+  const btn   = document.getElementById('authBtn');
+  errEl.classList.remove('sh');
+  if (!email || !pass){ showAuthErr('Ingresá correo y contraseña.'); return; }
+
+  btn.disabled = true;
+  loadEl.classList.add('sh');
+
+  try {
+    if (!navigator.onLine || !window._fbReady) {
+      const valid = await verifyOfflineCredentials(email, pass);
+      if (!valid) {
+        const hasCached = !!localStorage.getItem('nerv_offline_cred');
+        showAuthErr(hasCached ? 'Credenciales incorrectas (modo offline).' : 'Sin conexión. Necesitás conectarte al menos una vez para habilitar login offline.');
+        return;
+      }
+      const saved = loadSession();
+      if (saved && saved.email?.toLowerCase() === email.toLowerCase()) {
+        await applySession(saved, true);
+        toast('📵 Sesión offline iniciada','inf');
+        return;
+      }
+      showAuthErr('Sin conexión. Necesitás haber iniciado sesión previamente con esta cuenta.');
+      return;
+    }
+
+    const { signInWithEmailAndPassword } = window._fbAuthFns;
+    const cred = await signInWithEmailAndPassword(window._fbAuth, email, pass);
+    const uid  = cred.user.uid;
+
+    let profile = await fetchUserProfile(uid);
+    if (!profile){
+      profile = { nombre: email.split('@')[0], rol: 'admin' };
+      await saveUserProfile(uid, profile);
+    }
+
+    const u = { uid, email, name: profile.nombre, role: profile.rol };
+    saveSession(u);
+    await cacheCredentials(email, pass);
+    await applySession(u, true);
+
+  } catch(e){
+    if (e.code === 'auth/network-request-failed') {
+      const valid = await verifyOfflineCredentials(email, pass);
+      if (valid) {
+        const saved = loadSession();
+        if (saved && saved.email?.toLowerCase() === email.toLowerCase()) {
+          await applySession(saved, true);
+          toast('📵 Sesión offline iniciada','inf');
+          return;
+        }
+      }
+    }
+    const msgs = {
+      'auth/user-not-found':   'Usuario no encontrado.',
+      'auth/wrong-password':   'Contraseña incorrecta.',
+      'auth/invalid-email':    'Correo inválido.',
+      'auth/too-many-requests':'Demasiados intentos. Espera unos minutos.',
+      'auth/invalid-credential':'Correo o contraseña incorrectos.',
+      'auth/network-request-failed':'Sin conexión. No hay credenciales en caché.',
+    };
+    showAuthErr(msgs[e.code] || 'Error al iniciar sesión. (' + e.code + ')');
+  } finally {
+    btn.disabled = false;
+    loadEl.classList.remove('sh');
+  }
+}
+
+function showAuthErr(msg){
+  const el = document.getElementById('authErr');
+  el.textContent = msg;
+  el.classList.add('sh');
+}
+
+/* ── Aplicar sesión y arrancar app ── */
+async function applySession(u, isNew){
+  currentUser = u;
+  isReadOnly  = (u.role === 'gerencia');
+
+  // Actualizar UI del chip de usuario en appbar
+  const chip   = document.getElementById('userChip');
+  const avatar = document.getElementById('chipAvatar');
+  const nameEl = document.getElementById('chipName');
+  const roleEl = document.getElementById('chipRole');
+  if (chip){
+    chip.style.display = 'flex';
+    avatar.textContent = (u.name || u.email || '?')[0].toUpperCase();
+    nameEl.textContent = u.name || u.email;
+    roleEl.textContent = u.role === 'admin' ? 'Admin' : 'Gerencia';
+    if (u.role === 'gerencia') avatar.style.background = 'var(--c)';
+  }
+
+  // Rellenar menú de usuario
+  document.getElementById('umName').textContent  = u.name || '—';
+  document.getElementById('umEmail').textContent = u.email || '—';
+  const badge = document.getElementById('umRoleBadge');
+  badge.textContent = u.role === 'admin' ? '👑 Administrador' : '👁 Gerencia';
+  badge.className   = 'um-role-badge ' + u.role;
+
+  // Modo solo lectura: ocultar controles de escritura
+  applyReadOnlyMode();
+
+  // Panel admin
+  if (u.role === 'admin') {
+    document.getElementById('adminPanel').style.display = 'block';
+    loadUsersList();
+  }
+
+  // Ocultar overlay de login con animación
+  const ov = document.getElementById('authOverlay');
+  ov.classList.add('out');
+  setTimeout(() => ov.style.display = 'none', 400);
+
+  // Iniciar app
+  await cargarDatos();
+  setTimeout(()=>{ checkAlertas(); scheduleNextAlerts(); }, 4000);
+
+  if (isNew) toast('👋 Bienvenido, ' + (u.name || u.email));
+}
+
+/* ── Modo solo lectura para gerencia ── */
+function applyReadOnlyMode(){
+  if (!isReadOnly) return;
+  // Ocultar tab "nueva pila" y botones de escritura
+  // Se hace via CSS dinámico + atributo data
+  document.body.setAttribute('data-readonly', '1');
+  // Ocultar bottom-nav "nueva"
+  const nb = document.querySelector('.nb[data-pg="pgNueva"]');
+  if (nb) nb.style.display = 'none';
+}
+
+/* ── Cerrar sesión ── */
+async function doLogout(){
+  try {
+    if (window._fbReady) await window._fbAuthFns.signOut(window._fbAuth);
+  } catch(e){}
+  clearSession();
+  currentUser = null;
+  isReadOnly  = false;
+  document.getElementById('userMenu').classList.remove('op');
+  // Mostrar overlay de login
+  const ov = document.getElementById('authOverlay');
+  ov.style.display = 'flex';
+  ov.classList.remove('out');
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPass').value  = '';
+  document.getElementById('authErr').classList.remove('sh');
+  // Ocultar chip
+  document.getElementById('userChip').style.display = 'none';
+}
+
+/* ── Cambiar contraseña ── */
+async function doChangePassword(){
+  const cur    = document.getElementById('pwCurrent').value;
+  const nw     = document.getElementById('pwNew').value;
+  const conf   = document.getElementById('pwConfirm').value;
+  const errEl  = document.getElementById('pwErr');
+  errEl.classList.remove('sh');
+
+  if (!cur || !nw || !conf){ errEl.textContent='Completá todos los campos.'; errEl.classList.add('sh'); return; }
+  if (nw.length < 6){ errEl.textContent='La nueva contraseña debe tener al menos 6 caracteres.'; errEl.classList.add('sh'); return; }
+  if (nw !== conf){ errEl.textContent='Las contraseñas no coinciden.'; errEl.classList.add('sh'); return; }
+
+  const btn = document.getElementById('btnChangePw');
+  btn.disabled = true;
+  try {
+    const { EmailAuthProvider, reauthenticateWithCredential, updatePassword } = window._fbAuthFns;
+    const user  = window._fbAuth.currentUser;
+    const cred  = EmailAuthProvider.credential(user.email, cur);
+    await reauthenticateWithCredential(user, cred);
+    await updatePassword(user, nw);
+    toast('✅ Contraseña actualizada');
+    document.getElementById('pwCurrent').value = '';
+    document.getElementById('pwNew').value     = '';
+    document.getElementById('pwConfirm').value = '';
+    document.getElementById('userMenu').classList.remove('op');
+  } catch(e){
+    const msgs = {
+      'auth/wrong-password':'Contraseña actual incorrecta.',
+      'auth/too-many-requests':'Demasiados intentos. Esperá un momento.',
+      'auth/network-request-failed':'Sin conexión a internet.',
+    };
+    errEl.textContent = msgs[e.code] || 'Error: ' + e.code;
+    errEl.classList.add('sh');
+  } finally { btn.disabled = false; }
+}
+
+/* ── Guardar perfil de usuario en Firestore ── */
+async function saveUserProfile(uid, data){
+  if (!window._fbReady) return;
+  const {doc, setDoc, serverTimestamp, collection} = window._fb;
+  try {
+    await setDoc(doc(collection(window._fbDB,'usuarios'), uid), {
+      ...data, _ts: serverTimestamp()
+    }, { merge: true });
+  } catch(e){ console.warn('saveUserProfile:', e); }
+}
+
+/* ── Cargar lista de usuarios (solo admin) ── */
+async function loadUsersList(){
+  if (!window._fbReady) return;
+  const {getDocs, collection} = window._fb;
+  const {signInWithEmailAndPassword} = window._fbAuthFns;
+  try {
+    const snap = await getDocs(collection(window._fbDB,'usuarios'));
+    const el   = document.getElementById('usersList');
+    if (!el) return;
+    if (snap.empty){ el.innerHTML='<div class="empty" style="padding:10px">Sin usuarios registrados.</div>'; return; }
+    el.innerHTML = snap.docs.map(d => {
+      const u = d.data();
+      const initials = (u.nombre||u.email||'?')[0].toUpperCase();
+      const rolLabel = u.rol==='admin'?'Administrador':'Gerencia';
+      return `<div class="urow">
+        <div class="u-av ${u.rol}">${initials}</div>
+        <div class="u-info">
+          <div class="u-nm">${esc(u.nombre||'—')}</div>
+          <div class="u-em">${esc(d.id)}</div>
+          <div class="u-rl ${u.rol}">${rolLabel}</div>
+        </div>
+        ${d.id !== currentUser?.uid ? `<button class="btn xs dn" onclick="deleteUserProfile('${d.id}')">🗑</button>` : '<span class="tag" style="font-size:.52rem">TÚ</span>'}
+      </div>`;
+    }).join('');
+  } catch(e){ console.warn('loadUsersList:', e); }
+}
+
+/* ── Borrar perfil de usuario (solo admin) ── */
+async function deleteUserProfile(uid){
+  if (!confirm('¿Eliminar este usuario? Solo se borra el perfil, no la cuenta de Firebase Auth.')) return;
+  if (!window._fbReady) return;
+  const {doc, deleteDoc, collection} = window._fb;
+  try {
+    await deleteDoc(doc(collection(window._fbDB,'usuarios'), uid));
+    toast('Usuario eliminado');
+    loadUsersList();
+  } catch(e){ toast('Error al eliminar','er'); }
+}
+
+/* ── Crear usuario via Firebase Auth REST API ── */
+async function createNewUser(){
+  const name  = document.getElementById('newUserName').value.trim();
+  const email = document.getElementById('newUserEmail').value.trim();
+  const pass  = document.getElementById('newUserPass').value;
+  const role  = document.getElementById('newUserRole').value;
+  const errEl = document.getElementById('newUserErr');
+  errEl.classList.remove('sh');
+
+  if (!name||!email||!pass){ errEl.textContent='Completá todos los campos.'; errEl.classList.add('sh'); return; }
+  if (pass.length<6){ errEl.textContent='La contraseña debe tener al menos 6 caracteres.'; errEl.classList.add('sh'); return; }
+
+  const btn = document.getElementById('btnCreateUser');
+  btn.disabled = true;
+
+  try {
+    // Crear cuenta en Firebase Auth usando la REST API con la API key del proyecto
+    const apiKey = 'AIzaSyAfNPq3kO7YaRFMBq02eZVdA5zs2jc1h4g';
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,
+      { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email, password: pass, returnSecureToken: false }) }
+    );
+    const data = await res.json();
+    if (!res.ok){
+      const msgs = {
+        'EMAIL_EXISTS':'Ese correo ya está registrado.',
+        'INVALID_EMAIL':'Correo inválido.',
+        'WEAK_PASSWORD : Password should be at least 6 characters':'Contraseña muy corta (mín. 6 caracteres).',
+      };
+      throw new Error(msgs[data.error?.message] || data.error?.message || 'Error al crear usuario');
+    }
+
+    const uid = data.localId;
+    // Guardar perfil en Firestore
+    await saveUserProfile(uid, { nombre: name, rol: role, email, creadoPor: currentUser?.uid, _creadoEn: new Date().toISOString() });
+
+    toast(`✅ Usuario ${name} creado`);
+    ['newUserName','newUserEmail','newUserPass'].forEach(id => { document.getElementById(id).value=''; });
+    document.getElementById('newUserRole').value = 'admin';
+    loadUsersList();
+  } catch(e){
+    errEl.textContent = e.message;
+    errEl.classList.add('sh');
+  } finally { btn.disabled = false; }
+}
+
+/* ── Bloquear acciones de escritura si readonly ── */
+function guardWrite(fn){
+  return async function(...args){
+    if (isReadOnly){ toast('⛔ Sin permisos — modo solo lectura','er'); return; }
+    return fn(...args);
+  };
+}
+
+/* ── Eventos del menú de usuario ── */
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('authBtn')?.addEventListener('click', doLogin);
+  document.getElementById('btnLogout')?.addEventListener('click', doLogout);
+  document.getElementById('btnChangePw')?.addEventListener('click', doChangePassword);
+  document.getElementById('btnCreateUser')?.addEventListener('click', createNewUser);
+  document.getElementById('userMenu')?.addEventListener('click', e=>{
+    if (e.target === document.getElementById('userMenu'))
+      document.getElementById('userMenu').classList.remove('op');
+  });
+});
+
+/* ── CSS dinámico para modo solo lectura ── */
+const roStyle = document.createElement('style');
+roStyle.textContent = `
+  [data-readonly="1"] .btnCP,
+  [data-readonly="1"] .btnSaveAlim,
+  [data-readonly="1"] .btnSaveMort,
+  [data-readonly="1"] .btnSaveQuim,
+  [data-readonly="1"] .btnAgua,
+  [data-readonly="1"] .btnPeso,
+  [data-readonly="1"] .btnAddAlim,
+  [data-readonly="1"] .btnDel,
+  [data-readonly="1"] .btnNC,
+  [data-readonly="1"] .btnNcOk,
+  [data-readonly="1"] #btnCP,
+  [data-readonly="1"] #bBorrar,
+  [data-readonly="1"] #bSyncF,
+  [data-readonly="1"] [onclick*="cosecharPila"],
+  [data-readonly="1"] [onclick*="reactivarPila"],
+  [data-readonly="1"] [onclick*="eliminarPila"] {
+    display: none !important;
+  }
+  [data-readonly="1"] .page#pgNueva {
+    display: none !important;
+  }
+`;
+document.head.appendChild(roStyle);
+
+</script>
+
+<script>
+/* ══════════════════════════════════════════
+   PWA — Service Worker + Install Prompt
+══════════════════════════════════════════ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(r => console.info('✅ SW registrado:', r.scope))
+      .catch(e => console.warn('SW error:', e));
+  });
+}
+
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const banner = document.getElementById('pwaInstall');
+  if (banner) banner.classList.add('sh');
+});
+document.getElementById('pwaBtn')?.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('pwaInstall').classList.remove('sh');
+  if (outcome === 'accepted') toast('✅ App instalada correctamente', 'inf');
+});
+document.getElementById('pwaDismiss')?.addEventListener('click', () => {
+  document.getElementById('pwaInstall').classList.remove('sh');
+});
+window.addEventListener('appinstalled', () => {
+  toast('✅ App instalada — abre desde tu pantalla de inicio', 'inf');
+  document.getElementById('pwaInstall')?.classList.remove('sh');
+});
+
+/* ── Indicador de conexión en tiempo real ── */
+function updateOnlineStatus() {
+  const online = navigator.onLine;
+  const sdot = document.getElementById('sdot');
+  if (!online && sdot && !sdot.classList.contains('on')) {
+    toast('📵 Sin conexión — modo offline activo', 'wn');
+  }
+}
+window.addEventListener('online', () => { updateOnlineStatus(); toast('✅ Conexión restaurada','inf'); });
+window.addEventListener('offline', () => { toast('📵 Sin conexión — datos guardados localmente','wn'); });
+</script>
+
+</body>
+</html>

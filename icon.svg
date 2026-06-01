@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#030b0f"/>
+
+  <!-- Outer ring glow -->
+  <circle cx="256" cy="256" r="196" fill="none" stroke="rgba(0,230,118,0.15)" stroke-width="2"/>
+
+  <!-- Water tank shape -->
+  <rect x="120" y="180" width="272" height="192" rx="24" fill="none" stroke="rgba(0,230,118,0.25)" stroke-width="3"/>
+
+  <!-- Monitoring chart line -->
+  <polyline
+    points="140,320 186,268 228,290 270,230 316,252 370,200"
+    fill="none"
+    stroke="#00e676"
+    stroke-width="12"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Chart dots -->
+  <circle cx="186" cy="268" r="7" fill="#00e676"/>
+  <circle cx="270" cy="230" r="7" fill="#00e676"/>
+  <circle cx="370" cy="200" r="9" fill="#00e676"/>
+
+  <!-- Top accent bar -->
+  <rect x="186" y="155" width="140" height="6" rx="3" fill="#00e676" opacity="0.6"/>
+
+  <!-- Bottom water line -->
+  <path d="M120,355 Q196,340 256,350 Q316,360 392,345 L392,372 Q316,372 256,372 Q196,372 120,372 Z" fill="rgba(0,230,118,0.1)"/>
+</svg>

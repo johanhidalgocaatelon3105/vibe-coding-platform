@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <!-- Background (no rounded corners — iOS clips automatically) -->
+  <rect width="180" height="180" fill="#030b0f"/>
+
+  <!-- Ring -->
+  <circle cx="90" cy="90" r="70" fill="none" stroke="rgba(0,230,118,0.2)" stroke-width="1.5"/>
+
+  <!-- Monitoring line -->
+  <polyline
+    points="28,114 52,88 72,98 94,72 116,82 152,58"
+    fill="none"
+    stroke="#00e676"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Dots -->
+  <circle cx="52" cy="88" r="3" fill="#00e676"/>
+  <circle cx="94" cy="72" r="3" fill="#00e676"/>
+  <circle cx="152" cy="58" r="4" fill="#00e676"/>
+
+  <!-- Accent bar -->
+  <rect x="64" y="50" width="52" height="3" rx="1.5" fill="#00e676" opacity="0.5"/>
+</svg>

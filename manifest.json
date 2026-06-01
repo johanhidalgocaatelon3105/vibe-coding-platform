@@ -1,0 +1,46 @@
+{
+  "id": "/",
+  "name": "Pre Crías · NERV",
+  "short_name": "PreCrías",
+  "description": "Sistema profesional de monitoreo acuícola de pre-crías de camarón — Densidad, hectareaje, animales, notificaciones y login offline",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#030b0f",
+  "theme_color": "#030b0f",
+  "orientation": "portrait",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nueva Pila",
+      "short_name": "Nueva",
+      "description": "Crear una nueva pila de cultivo",
+      "url": "./?section=nueva",
+      "icons": [{ "src": "icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Ver resumen del sistema",
+      "url": "./?section=dashboard",
+      "icons": [{ "src": "icons/icon.svg", "sizes": "any" }]
+    }
+  ]
+}
